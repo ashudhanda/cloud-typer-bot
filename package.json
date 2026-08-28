@@ -1,0 +1,18 @@
+{
+  "name": "cloud-typer-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "telegram-controlled cloud typer that logs wakatime/hackatime heartbeats",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}
