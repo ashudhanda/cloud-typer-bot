@@ -15,13 +15,29 @@ const rand = (min, max) => min + Math.random() * (max - min);
 
 class TyperRun {
   constructor(opts) {
-    this.content = String(opts.content || '').replace(/\r\n/g, '\n');
-    this.fileName = opts.fileName || 'code.txt';
+    this.files = (opts.files || []).map((f) => {
+      const content = String(f.content || '').replace(/\r\n/g, '\n');
+      const lineStarts = [0];
+      for (let i = 0; i < content.length; i++) {
+        if (content[i] === '\n') lineStarts.push(i + 1);
+      }
+      return {
+        content,
+        fileName: f.fileName || 'code.txt',
+        lineStarts,
+        totalLines: lineStarts.length,
+        outPath: path.join(
+          OUT_DIR,
+          `${Date.now()}-${Math.floor(rand(100, 999))}-${f.fileName || 'code.txt'}`
+        ),
+      };
+    });
     this.project = opts.project || process.env.DEFAULT_PROJECT || 'myproject';
     this.durationMin = opts.durationMin;
     this.mode = opts.mode; // 'realtime' | 'instant'
     this.speed = SPEED_PROFILES[opts.speed] || SPEED_PROFILES.normal;
-    this.index = 0;
+    this.fileIndex = 0; // which file is being typed
+    this.index = 0; // char index inside the current file
     this.heartbeatsSent = 0;
     this.heartbeatsFailed = 0;
     this.startedAt = Date.now();
@@ -29,52 +45,51 @@ class TyperRun {
     this.stopped = false;
     this.timer = null;
     this.hbTimer = null;
+    this.onFileDone = opts.onFileDone || (() => {});
     this.onFinish = opts.onFinish || (() => {});
-    this.outPath = path.join(OUT_DIR, `${Date.now()}-${this.fileName}`);
-    // windows-style entity path so stats look like they came from the same machine
-    this.entity = `C:\\Users\\WELCOME\\${this.project}\\${this.fileName}`;
-
-    // newline offsets for lineno/cursorpos math
-    this.lineStarts = [0];
-    for (let i = 0; i < this.content.length; i++) {
-      if (this.content[i] === '\n') this.lineStarts.push(i + 1);
-    }
-    this.totalLines = this.lineStarts.length;
+    this.totalCharsAll = this.files.reduce((s, f) => s + f.content.length, 0);
   }
 
-  lineInfo(idx) {
+  entityFor(f) {
+    // windows-style path so stats blend with the existing machine
+    return `C:\\Users\\WELCOME\\${this.project}\\${f.fileName}`;
+  }
+
+  lineInfo(f, idx) {
+    const arr = f.lineStarts;
     let lo = 0;
-    let hi = this.lineStarts.length - 1;
+    let hi = arr.length - 1;
     let ans = 0;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (this.lineStarts[mid] <= idx) {
+      if (arr[mid] <= idx) {
         ans = mid;
         lo = mid + 1;
       } else {
         hi = mid - 1;
       }
     }
-    return { lineno: ans + 1, cursorpos: idx - this.lineStarts[ans] + 1 };
+    return { lineno: ans + 1, cursorpos: idx - arr[ans] + 1 };
   }
 
-  heartbeat(isWrite, timeOverride, idxOverride) {
-    const idx = idxOverride !== undefined ? idxOverride : this.index;
-    const clamped = Math.max(0, Math.min(idx, this.content.length));
-    const { lineno, cursorpos } = this.lineInfo(clamped);
+  heartbeatFor(f, idx, isWrite, timeOverride) {
+    const clamped = Math.max(0, Math.min(idx, f.content.length));
+    const { lineno, cursorpos } = this.lineInfo(f, clamped);
     return waka.makeHeartbeat({
-      entity: this.entity,
+      entity: this.entityFor(f),
       project: this.project,
       time: timeOverride !== undefined ? timeOverride : Date.now() / 1000,
       lineno,
       cursorpos,
-      lines: this.totalLines,
+      lines: f.totalLines,
       isWrite,
     });
   }
 
   async fireHeartbeat(isWrite) {
-    const res = await waka.sendHeartbeat(this.heartbeat(isWrite));
+    const f = this.files[Math.min(this.fileIndex, this.files.length - 1)];
+    if (!f) return;
+    const res = await waka.sendHeartbeat(this.heartbeatFor(f, this.index, isWrite));
     if (res.ok) this.heartbeatsSent += 1;
     else {
       this.heartbeatsFailed += 1;
@@ -83,28 +98,47 @@ class TyperRun {
   }
 
   startRealtime() {
-    const totalChars = this.content.length;
     const totalMs = this.durationMin * 60 * 1000;
-    const baseDelay = Math.max(20, (totalMs / Math.max(1, totalChars)) * this.speed.pace);
 
-    const step = () => {
+    const runFile = () => {
       if (this.stopped || this.done) return;
-      // small bursts of 1-4 chars feel more like a person than a fixed metronome
-      const burst = Math.min(1 + Math.floor(rand(0, 3.2)), totalChars - this.index);
-      if (burst > 0) {
-        fs.appendFileSync(this.outPath, this.content.slice(this.index, this.index + burst));
-        this.index += burst;
-      }
-      if (this.index >= totalChars) {
-        this.finish();
-        return;
-      }
-      let delay = baseDelay * burst * rand(0.45, 1.6);
-      if (this.content[this.index - 1] === '\n') delay += rand(250, 1400); // end-of-line pause
-      if (Math.random() < 0.006) delay += rand(2500, 9000); // occasional thinking pause
-      this.timer = setTimeout(step, delay);
+      const f = this.files[this.fileIndex];
+      // bigger file gets a bigger share of the total duration
+      const share = f.content.length / Math.max(1, this.totalCharsAll);
+      const fileMs = Math.max(30000, totalMs * share);
+      const baseDelay = Math.max(20, (fileMs / Math.max(1, f.content.length)) * this.speed.pace);
+      fs.writeFileSync(f.outPath, '');
+
+      const step = () => {
+        if (this.stopped || this.done) return;
+        // small bursts of 1-4 chars feel more like a person than a fixed metronome
+        const burst = Math.min(1 + Math.floor(rand(0, 3.2)), f.content.length - this.index);
+        if (burst > 0) {
+          fs.appendFileSync(f.outPath, f.content.slice(this.index, this.index + burst));
+          this.index += burst;
+        }
+        if (this.index >= f.content.length) {
+          this.fireHeartbeat(true); // save on file finish
+          const doneIdx = this.fileIndex;
+          this.onFileDone(this, doneIdx);
+          this.fileIndex += 1;
+          this.index = 0;
+          if (this.fileIndex >= this.files.length) {
+            this.finish();
+            return;
+          }
+          // human-ish break between files (heartbeats keep flowing on the next file)
+          this.timer = setTimeout(runFile, rand(20000, 60000));
+          return;
+        }
+        let delay = baseDelay * burst * rand(0.45, 1.6);
+        if (f.content[this.index - 1] === '\n') delay += rand(250, 1400); // end-of-line pause
+        if (Math.random() < 0.006) delay += rand(2500, 9000); // occasional thinking pause
+        this.timer = setTimeout(step, delay);
+      };
+      step();
     };
-    this.timer = setTimeout(step, 500);
+    this.timer = setTimeout(runFile, 500);
 
     // throttled like the real plugin: ~1 heartbeat per 2 min while active, plus saves
     const hbLoop = async () => {
@@ -119,27 +153,46 @@ class TyperRun {
     const now = Date.now() / 1000;
     const start = now - this.durationMin * 60;
     const beats = [];
+
+    // map global progress -> which file we're in (proportional by size)
+    const bounds = [];
+    let acc = 0;
+    for (const f of this.files) {
+      acc += f.content.length;
+      bounds.push(acc);
+    }
+
     let t = start;
     let i = 0;
     while (t < now) {
       const frac = (t - start) / (now - start);
-      const idx = Math.floor(frac * this.content.length);
-      beats.push(this.heartbeat(i % 15 === 14, t, idx)); // every 15th = save
+      const globalIdx = Math.floor(frac * this.totalCharsAll);
+      let fi = 0;
+      while (fi < bounds.length - 1 && globalIdx >= bounds[fi]) fi += 1;
+      const prevBound = fi === 0 ? 0 : bounds[fi - 1];
+      const f = this.files[fi];
+      const localIdx = Math.min(globalIdx - prevBound, f.content.length);
+      const atFileEnd = localIdx >= f.content.length - 1;
+      beats.push(this.heartbeatFor(f, localIdx, i % 15 === 14 || atFileEnd, t));
       i += 1;
       t += rand(100, 135); // one beat every ~2 min, same cadence as a throttled plugin
     }
-    beats.push(this.heartbeat(true, now, this.content.length)); // final save
+    const last = this.files[this.files.length - 1];
+    beats.push(this.heartbeatFor(last, last.content.length, true, now)); // final save
 
     const res = await waka.sendBulk(beats);
     this.heartbeatsSent = res.sent;
     this.heartbeatsFailed = res.failed;
-    this.index = this.content.length;
-    fs.writeFileSync(this.outPath, this.content);
+    for (let fi = 0; fi < this.files.length; fi++) {
+      fs.writeFileSync(this.files[fi].outPath, this.files[fi].content);
+      this.onFileDone(this, fi);
+    }
+    this.fileIndex = this.files.length;
     this.finish();
   }
 
   start() {
-    fs.writeFileSync(this.outPath, '');
+    if (!this.files.length) throw new Error('no files queued');
     if (this.mode === 'instant') return this.startInstant();
     this.startRealtime();
     return undefined;
@@ -156,26 +209,32 @@ class TyperRun {
     this.done = true;
     if (this.timer) clearTimeout(this.timer);
     if (this.hbTimer) clearTimeout(this.hbTimer);
-    if (this.mode === 'realtime') this.fireHeartbeat(true); // final save
     this.onFinish(this);
   }
 
   status() {
-    const pct = this.content.length ? (this.index / this.content.length) * 100 : 100;
+    const completedChars =
+      this.mode === 'instant' && this.done
+        ? this.totalCharsAll
+        : this.files.slice(0, this.fileIndex).reduce((s, f) => s + f.content.length, 0) + this.index;
+    const pct = this.totalCharsAll ? (completedChars / this.totalCharsAll) * 100 : 100;
     const elapsedMin = (Date.now() - this.startedAt) / 60000;
     const etaMin = this.mode === 'instant' ? 0 : Math.max(0, this.durationMin - elapsedMin);
+    const cur = this.files[Math.min(this.fileIndex, this.files.length - 1)];
     return {
       stopped: this.stopped,
       percent: pct.toFixed(1),
-      charsDone: this.index,
-      charsTotal: this.content.length,
+      charsDone: completedChars,
+      charsTotal: this.totalCharsAll,
+      filesDone: this.mode === 'instant' && this.done ? this.files.length : this.fileIndex,
+      filesTotal: this.files.length,
+      currentFile: cur ? cur.fileName : '',
       elapsedMin: elapsedMin.toFixed(1),
       etaMin: etaMin.toFixed(0),
       heartbeatsSent: this.heartbeatsSent,
       heartbeatsFailed: this.heartbeatsFailed,
       done: this.done,
       mode: this.mode,
-      fileName: this.fileName,
       project: this.project,
     };
   }

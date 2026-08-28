@@ -8,7 +8,7 @@ const OWNER_ID = String(process.env.OWNER_ID || '').trim();
 
 let bot = null;
 let currentRun = null;
-let source = null; // { content, fileName }
+let queue = []; // [{ content, fileName }] — send as many files as you like, they stack up
 const pending = new Map(); // chatId -> { step, durationMin, mode, speed, project }
 
 function isOwner(chatId) {
@@ -25,6 +25,12 @@ function modeKeyboard() {
       ],
     },
   };
+}
+
+function queueSummary() {
+  const total = queue.reduce((s, f) => s + f.content.length, 0);
+  const names = queue.map((f) => f.fileName).join(', ');
+  return `${queue.length} file${queue.length > 1 ? 's' : ''} (${total.toLocaleString()} chars) — ${names}`;
 }
 
 function startBot() {
@@ -48,11 +54,13 @@ function startBot() {
         '/start — configure + launch a run\n' +
         '/status — live progress\n' +
         '/stop — end run, get the partial file\n' +
-        '/getfile — download the current/last typed file\n' +
-        '/name <file> — rename the loaded source\n' +
+        '/getfile — download the typed files\n' +
+        '/queue — see what\'s loaded\n' +
+        '/clearqueue — drop all loaded files\n' +
+        '/name <file> — rename the last loaded file\n' +
         '/id — your chat id (for OWNER_ID)\n' +
         '/help — this list\n\n' +
-        'flow: upload/paste code → /start → duration → mode → speed → project → ▶ start'
+        'flow: send files one by one (they stack up) → /start → duration → mode → speed → project → ▶ start. one total duration is split across the files by size.'
     );
   });
 
@@ -66,18 +74,35 @@ function startBot() {
       bot.sendMessage(chatId, 'a run is already active. /status to check, /stop to end it.');
       return;
     }
-    if (!source) {
-      bot.sendMessage(chatId, 'send me the code first — upload a file or paste the code here (min 200 chars). then we pick duration and mode.');
+    if (!queue.length) {
+      bot.sendMessage(chatId, 'send me the code first — upload files (html/css/js anything) or paste code (min 200 chars). send as many as you like, they stack up.');
       return;
     }
     askDuration(chatId);
   });
 
+  bot.onText(/\/queue/, (msg) => {
+    const chatId = msg.chat.id;
+    if (!isOwner(chatId)) return;
+    if (!queue.length) {
+      bot.sendMessage(chatId, 'queue is empty — send files or paste code.');
+      return;
+    }
+    bot.sendMessage(chatId, `loaded: ${queueSummary()}\n\n/start to run, /clearqueue to reset.`);
+  });
+
+  bot.onText(/\/clearqueue/, (msg) => {
+    const chatId = msg.chat.id;
+    if (!isOwner(chatId)) return;
+    queue = [];
+    bot.sendMessage(chatId, 'queue cleared. send fresh files when ready.');
+  });
+
   bot.onText(/\/name (.+)/, (msg, match) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
-    if (!source) {
-      bot.sendMessage(chatId, 'no source loaded yet — upload or paste code first.');
+    if (!queue.length) {
+      bot.sendMessage(chatId, 'no file loaded yet — upload or paste code first.');
       return;
     }
     const name = (match[1] || '').trim();
@@ -85,23 +110,23 @@ function startBot() {
       bot.sendMessage(chatId, 'weird name — keep it simple, like style.css');
       return;
     }
-    source.fileName = name;
-    bot.sendMessage(chatId, `source renamed to ${name}`);
+    queue[queue.length - 1].fileName = name; // renames the last added file
+    bot.sendMessage(chatId, `renamed to ${name}\n\nloaded: ${queueSummary()}`);
   });
 
   bot.onText(/\/status/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!currentRun) {
-      bot.sendMessage(chatId, 'no run yet. upload code, then /start.');
+      bot.sendMessage(chatId, 'no run yet. send files, then /start.');
       return;
     }
     const s = currentRun.status();
     const label = s.done ? (s.stopped ? '🛑 stopped' : '✅ finished') : '⏳ running';
     bot.sendMessage(
       chatId,
-      `${label} — ${s.fileName}\n` +
-        `• progress: ${s.percent}% (${s.charsDone}/${s.charsTotal} chars)\n` +
+      `${label} — file ${Math.min(s.filesDone + (s.done ? 0 : 1), s.filesTotal)}/${s.filesTotal}: ${s.currentFile}\n` +
+        `• overall: ${s.percent}% (${s.charsDone}/${s.charsTotal} chars)\n` +
         `• elapsed: ${s.elapsedMin} min${s.done ? '' : `  • eta: ~${s.etaMin} min`}\n` +
         `• heartbeats: ${s.heartbeatsSent} sent${s.heartbeatsFailed ? `, ${s.heartbeatsFailed} failed` : ''}\n` +
         `• mode: ${s.mode}  • project: ${s.project}`
@@ -116,39 +141,52 @@ function startBot() {
       return;
     }
     currentRun.stop();
-    try {
-      await bot.sendDocument(chatId, currentRun.outPath, {}, { filename: currentRun.fileName });
-    } catch {}
     const s = currentRun.status();
+    // send whatever got typed in the current (partial) file
+    try {
+      const f = currentRun.files[Math.min(currentRun.fileIndex, currentRun.files.length - 1)];
+      if (f && fs.existsSync(f.outPath) && fs.statSync(f.outPath).size > 0) {
+        await bot.sendDocument(chatId, f.outPath, { caption: 'partial (stopped mid-file)' }, { filename: f.fileName });
+      }
+    } catch {}
     await bot.sendMessage(
       chatId,
-      `🛑 stopped at ${s.percent}% — partial file above. heartbeats already sent (${s.heartbeatsSent}) stay on the dashboard.`
+      `🛑 stopped at ${s.percent}% overall (file ${s.filesDone + 1}/${s.filesTotal}). completed files were already delivered. heartbeats sent so far (${s.heartbeatsSent}) stay on the dashboard.`
     );
   });
 
   bot.onText(/\/getfile/, async (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
-    let file = currentRun ? currentRun.outPath : null;
-    if (!file) {
+    let sent = 0;
+    if (currentRun) {
+      for (const f of currentRun.files) {
+        try {
+          if (fs.existsSync(f.outPath) && fs.statSync(f.outPath).size > 0) {
+            await bot.sendDocument(chatId, f.outPath, {}, { filename: f.fileName });
+            sent += 1;
+          }
+        } catch {}
+      }
+    }
+    if (!sent) {
+      // fall back to the newest files in the out dir
       const files = fs
         .readdirSync(OUT_DIR)
         .map((f) => path.join(OUT_DIR, f))
-        .filter((f) => fs.statSync(f).isFile());
-      if (files.length) file = files.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+        .filter((f) => fs.statSync(f).isFile() && fs.statSync(f).size > 0)
+        .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+      for (const f of files.slice(0, 5)) {
+        try {
+          await bot.sendDocument(chatId, f);
+          sent += 1;
+        } catch {}
+      }
     }
-    if (!file) {
-      await bot.sendMessage(chatId, 'no file yet — upload source and /start a run first.');
-      return;
-    }
-    try {
-      await bot.sendDocument(chatId, file);
-    } catch {
-      await bot.sendMessage(chatId, 'failed to send the file, try again.');
-    }
+    if (!sent) await bot.sendMessage(chatId, 'no file yet — load files and /start a run first.');
   });
 
-  // incoming source as a file upload
+  // incoming source as a file upload — stacks into the queue
   bot.on('document', async (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
@@ -160,8 +198,12 @@ function startBot() {
       const link = await bot.getFileLink(msg.document.file_id);
       const res = await fetch(link);
       const text = await res.text();
-      source = { content: text, fileName: msg.document.file_name || 'uploaded-code.txt' };
-      await bot.sendMessage(chatId, `source loaded: ${source.fileName} (${text.length} chars)\n\nnow /start to configure the run.`);
+      queue.push({ content: text, fileName: msg.document.file_name || 'uploaded-code.txt' });
+      const busy = currentRun && !currentRun.done;
+      await bot.sendMessage(
+        chatId,
+        `added ${msg.document.file_name || 'file'} (${text.length} chars)\nloaded: ${queueSummary()}${busy ? '\n\n(a run is active — these will be used for the next one)' : '\n\n/start when ready, /clearqueue to reset.'}`
+      );
     } catch {
       await bot.sendMessage(chatId, 'could not read that file — send a plain text/code file.');
     }
@@ -179,12 +221,12 @@ function startBot() {
         if (data === 'dur:custom') {
           p.step = 'customDur';
           pending.set(chatId, p);
-          await bot.sendMessage(chatId, 'type the duration in minutes (e.g. 300 for 5h):');
+          await bot.sendMessage(chatId, 'type the total duration in minutes (e.g. 300 for 5h) — it gets split across the queued files by size:');
         } else {
           p.durationMin = parseInt(data.slice(4), 10);
           p.step = 'mode';
           pending.set(chatId, p);
-          await bot.sendMessage(chatId, `duration: ${p.durationMin} min\n\npick mode:`, modeKeyboard());
+          await bot.sendMessage(chatId, `duration: ${p.durationMin} min total\n\npick mode:`, modeKeyboard());
         }
       } else if (data.startsWith('mode:')) {
         p.mode = data.slice(5);
@@ -253,7 +295,7 @@ function startBot() {
       p.durationMin = mins;
       p.step = 'mode';
       pending.set(chatId, p);
-      await bot.sendMessage(chatId, `duration: ${mins} min\n\npick mode:`, modeKeyboard());
+      await bot.sendMessage(chatId, `duration: ${mins} min total\n\npick mode:`, modeKeyboard());
       return;
     }
 
@@ -264,10 +306,11 @@ function startBot() {
     }
 
     if (msg.text.length >= 200) {
-      source = { content: msg.text, fileName: 'pasted-code.txt' };
+      queue.push({ content: msg.text, fileName: 'pasted-code.txt' });
+      const busy = currentRun && !currentRun.done;
       await bot.sendMessage(
         chatId,
-        `got it — ${msg.text.length} chars loaded as source (named pasted-code.txt, use /name style.css to rename — the extension sets the language on the dashboard).\n\nnow /start to configure the run.`
+        `got it — ${msg.text.length} chars added as pasted-code.txt (use /name style.css to rename — the extension sets the language on the dashboard).\nloaded: ${queueSummary()}${busy ? '\n\n(a run is active — these will be used for the next one)' : '\n\n/start when ready.'}`
       );
     }
   });
@@ -279,7 +322,7 @@ function startBot() {
     const beats = Math.round((p.durationMin * 60) / 117);
     await bot.sendMessage(
       chatId,
-      `ready:\n• file: ${source.fileName}\n• duration: ${hrs}h\n• mode: ${p.mode}\n• speed: ${p.speed}\n• project: ${p.project}\n• ~${beats} heartbeats will be sent\n\nstart?`,
+      `ready:\n• files: ${queueSummary()}\n• duration: ${hrs}h total (split by file size)\n• mode: ${p.mode}\n• speed: ${p.speed}\n• project: ${p.project}\n• ~${beats} heartbeats will be sent\n\nstart?`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -298,22 +341,30 @@ function startBot() {
       await bot.sendMessage(chatId, 'already running. /stop first.');
       return;
     }
+    if (!queue.length) {
+      await bot.sendMessage(chatId, 'queue is empty — send files first.');
+      return;
+    }
     pending.delete(chatId);
+    const filesForRun = queue;
+    queue = []; // run owns its copy; new uploads stack for the next run
     currentRun = new TyperRun({
-      content: source.content,
-      fileName: source.fileName,
+      files: filesForRun,
       project: p.project,
       durationMin: p.durationMin,
       mode: p.mode,
       speed: p.speed,
+      onFileDone: async (run, fi) => {
+        const f = run.files[fi];
+        try {
+          await bot.sendDocument(chatId, f.outPath, { caption: `✅ file ${fi + 1}/${run.files.length} done: ${f.fileName}` }, { filename: f.fileName });
+        } catch {}
+      },
       onFinish: async (run) => {
         const s = run.status();
-        try {
-          await bot.sendDocument(chatId, run.outPath, {}, { filename: run.fileName });
-        } catch {}
         await bot.sendMessage(
           chatId,
-          `✅ done: ${run.fileName}\n• heartbeats sent: ${s.heartbeatsSent}${s.heartbeatsFailed ? ` (failed: ${s.heartbeatsFailed})` : ''}\n• project: ${s.project}\n• mode: ${s.mode}`
+          `✅ run complete — ${s.filesTotal} file${s.filesTotal > 1 ? 's' : ''} typed\n• heartbeats sent: ${s.heartbeatsSent}${s.heartbeatsFailed ? ` (failed: ${s.heartbeatsFailed})` : ''}\n• project: ${s.project}\n• mode: ${s.mode}\n\nsend more files and /start for the next run.`
         );
       },
     });
@@ -322,8 +373,8 @@ function startBot() {
       await bot.sendMessage(
         chatId,
         p.mode === 'instant'
-          ? '⚡ instant run — backfilling heartbeats now, file lands in a few seconds...'
-          : `⏱ realtime run started — typing ${source.fileName} for ~${(p.durationMin / 60).toFixed(1)}h. /status anytime, /stop to end early.`
+          ? '⚡ instant run — backfilling heartbeats now, files land in a few seconds...'
+          : `⏱ realtime run started — typing ${filesForRun.length} file${filesForRun.length > 1 ? 's' : ''} over ~${(p.durationMin / 60).toFixed(1)}h. each file arrives here as it finishes. /status anytime, /stop to end early.`
       );
     } catch (e) {
       await bot.sendMessage(chatId, `run failed to start: ${e.message || e}`);
@@ -332,7 +383,7 @@ function startBot() {
 
   function askDuration(chatId) {
     pending.set(chatId, { step: 'duration' });
-    bot.sendMessage(chatId, `source ready: ${source.fileName} (${source.content.length} chars)\n\npick duration:`, {
+    bot.sendMessage(chatId, `loaded: ${queueSummary()}\n\npick total duration:`, {
       reply_markup: {
         inline_keyboard: [
           [
