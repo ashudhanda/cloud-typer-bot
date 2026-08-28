@@ -147,6 +147,7 @@ class TyperRun {
 
   stop() {
     this.stopped = true;
+    this.done = true; // mark done too, otherwise /start and /status think it's still running
     if (this.timer) clearTimeout(this.timer);
     if (this.hbTimer) clearTimeout(this.hbTimer);
   }
@@ -164,6 +165,7 @@ class TyperRun {
     const elapsedMin = (Date.now() - this.startedAt) / 60000;
     const etaMin = this.mode === 'instant' ? 0 : Math.max(0, this.durationMin - elapsedMin);
     return {
+      stopped: this.stopped,
       percent: pct.toFixed(1),
       charsDone: this.index,
       charsTotal: this.content.length,

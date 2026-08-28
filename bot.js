@@ -97,9 +97,10 @@ function startBot() {
       return;
     }
     const s = currentRun.status();
+    const label = s.done ? (s.stopped ? '🛑 stopped' : '✅ finished') : '⏳ running';
     bot.sendMessage(
       chatId,
-      `${s.done ? '✅ finished' : '⏳ running'} — ${s.fileName}\n` +
+      `${label} — ${s.fileName}\n` +
         `• progress: ${s.percent}% (${s.charsDone}/${s.charsTotal} chars)\n` +
         `• elapsed: ${s.elapsedMin} min${s.done ? '' : `  • eta: ~${s.etaMin} min`}\n` +
         `• heartbeats: ${s.heartbeatsSent} sent${s.heartbeatsFailed ? `, ${s.heartbeatsFailed} failed` : ''}\n` +
