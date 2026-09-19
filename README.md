@@ -38,6 +38,20 @@ you give it code, tell it how long, and it:
 2. `/start` → pick duration → mode → speed → project → ▶ start
 3. `/status` to watch progress, `/stop` to end early (partial file is sent), `/getfile` to grab the file anytime
 
+### command reference
+
+| command | what it does |
+| ------- | ------------ |
+| `/start` | configure and launch a run (duration → mode → speed → project) |
+| `/status` | live progress — percent, ETA, heartbeats sent/failed |
+| `/stop` | end the run early; the partial file is sent |
+| `/getfile` | download the typed files |
+| `/queue` | see what's loaded |
+| `/clearqueue` | drop all loaded files |
+| `/name <file>` | rename the last loaded file |
+| `/id` | your chat id (for `OWNER_ID`) |
+| `/help` | list of commands |
+
 file naming matters: the dashboard language comes from the extension, so `style.css` shows up as CSS, `app.js` as JavaScript. rename a pasted source with `/name style.css`.
 
 ## the two modes
