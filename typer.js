@@ -55,6 +55,9 @@ class TyperRun {
     return `C:\\Users\\WELCOME\\${this.project}\\${f.fileName}`;
   }
 
+  // Binary-search the precomputed line-start offsets to find which line a
+  // character index falls on. Returns the 1-based line number and the 1-based
+  // cursor column the wakatime heartbeat payload expects.
   lineInfo(f, idx) {
     const arr = f.lineStarts;
     let lo = 0;
