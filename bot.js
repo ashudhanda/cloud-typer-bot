@@ -11,6 +11,9 @@ let currentRun = null;
 let queue = []; // [{ content, fileName }] — send as many files as you like, they stack up
 const pending = new Map(); // chatId -> { step, durationMin, mode, speed, project }
 
+// The bot is deliberately wide open until OWNER_ID is set — otherwise /id
+// (the way you learn your chat id) would have no way to run on first boot.
+// Once set, every command, upload and callback below refuses non-owner ids.
 function isOwner(chatId) {
   if (!OWNER_ID) return true; // unlocked until OWNER_ID is set
   return String(chatId) === OWNER_ID;
