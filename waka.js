@@ -15,6 +15,8 @@ function headers() {
   };
 }
 
+// Single-shot heartbeat POST. Never throws — returns { ok } plus a status
+// code or error string, so the caller can keep its own sent/failed tallies.
 async function sendHeartbeat(hb) {
   if (!API_KEY) return { ok: false, error: 'missing WAKA_API_KEY' };
   try {
