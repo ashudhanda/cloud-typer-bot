@@ -56,6 +56,9 @@ async function sendBulk(hbs) {
   return results;
 }
 
+// Shape a wakatime-compatible heartbeat payload. entity is the (spoofed) file
+// path, category 'coding' counts as human coding on the dashboard, time is
+// unix seconds, and is_write marks a file save rather than passive editing.
 function makeHeartbeat({ entity, project, time, lineno, cursorpos, lines, isWrite }) {
   return {
     entity,
