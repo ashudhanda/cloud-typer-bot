@@ -19,6 +19,7 @@ function isOwner(chatId) {
   return String(chatId) === OWNER_ID;
 }
 
+// the second step of the /start wizard: realtime vs instant as inline buttons
 function modeKeyboard() {
   return {
     reply_markup: {
@@ -30,6 +31,8 @@ function modeKeyboard() {
   };
 }
 
+// one-line queue recap reused by /start, /queue and the confirm screen, e.g.
+// "2 files (12,340 chars) — app.js, style.css"
 function queueSummary() {
   const total = queue.reduce((s, f) => s + f.content.length, 0);
   const names = queue.map((f) => f.fileName).join(', ');
