@@ -5,6 +5,9 @@ const waka = require('./waka');
 const OUT_DIR = path.join(__dirname, 'out');
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
+// pace multiplies the base per-char delay: 1.0 = normal, above 1 = slower,
+// below 1 = faster. picking 'slow' simply stretches the same run over ~1.35x
+// the inter-char pauses — duration and heartbeat cadence are untouched.
 const SPEED_PROFILES = {
   slow: { pace: 1.35 },
   normal: { pace: 1.0 },
