@@ -321,6 +321,9 @@ function startBot() {
     }
   });
 
+  // the "~N heartbeats" number is just duration / 117s — 117 is the middle of
+  // typer.js's 105–135s heartbeat jitter window, so the estimate lands within
+  // a beat or two of the actual count.
   async function showConfirm(chatId, p) {
     p.step = 'confirm';
     pending.set(chatId, p);
