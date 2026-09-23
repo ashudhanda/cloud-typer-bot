@@ -1,5 +1,7 @@
 const API_URL = (process.env.WAKA_API_URL || 'https://hackatime.hackclub.com/api/hackatime/v1').replace(/\/+$/, '');
 const API_KEY = process.env.WAKA_API_KEY || '';
+// user segment in the heartbeat url — 'current' works on wakatime; hackatime
+// may 404 on it, in which case set WAKA_USER to your hackatime username/id.
 const USER_SEGMENT = process.env.WAKA_USER || 'current';
 
 // the real plugins just run wakatime-cli under the hood, and wakatime parses
