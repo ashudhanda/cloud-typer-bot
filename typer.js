@@ -197,6 +197,8 @@ class TyperRun {
     this.finish();
   }
 
+  // instant backfills everything in one promise; realtime runs on timers and
+  // returns nothing — track it via .done or the bot's /status.
   start() {
     if (!this.files.length) throw new Error('no files queued');
     if (this.mode === 'instant') return this.startInstant();
