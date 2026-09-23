@@ -219,7 +219,7 @@ function startBot() {
   bot.on('callback_query', async (q) => {
     const chatId = q.message.chat.id;
     if (!isOwner(chatId)) return;
-    const p = pending.get(chatId) || {};
+    const p = pending.get(chatId) || {}; // callbacks resume the /start wizard from the pending map — if the bot restarted mid-wizard the map is empty and we start from a blank slate
     const data = q.data || '';
 
     try {
