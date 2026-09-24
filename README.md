@@ -27,6 +27,8 @@ you give it code, tell it how long, and it:
 | `WAKA_API_URL` | `https://hackatime.hackclub.com/api/hackatime/v1` (default) — for wakatime.com use `https://wakatime.com/api/v1` |
 | `OWNER_ID` | your telegram id — see step 7 |
 | `DEFAULT_PROJECT` | optional default project name |
+| `WAKA_USER` | hackatime username/id — only needed if `current` 404s on your server |
+| `PORT` | health server port — render sets this automatically, leave unset locally |
 
 6. deploy, wait for it to go live
 7. open your bot in telegram → `/id` → copy the number → set `OWNER_ID` in render → redeploy. this locks the bot so only you can use it
