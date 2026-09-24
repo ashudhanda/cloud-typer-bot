@@ -1,3 +1,7 @@
+// Boot order: the health server comes first, then the Telegram bot. Render
+// needs a bound port to mark the service live, and UptimeRobot pings
+// `/health` to keep the free instance awake — the bot's long-polling then
+// runs on top of it.
 require('dotenv').config();
 const express = require('express');
 
