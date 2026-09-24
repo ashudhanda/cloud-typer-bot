@@ -18,6 +18,10 @@ const rand = (min, max) => min + Math.random() * (max - min);
 
 class TyperRun {
   constructor(opts) {
+    // Normalize each queued file up front: \r\n -> \n so char math matches the
+    // content we type and send; precompute line-start offsets so lineInfo()
+    // can binary-search them later; give every run a unique outPath (timestamp
+    // + random suffix) so reruns never overwrite earlier files.
     this.files = (opts.files || []).map((f) => {
       const content = String(f.content || '').replace(/\r\n/g, '\n');
       const lineStarts = [0];
@@ -93,6 +97,8 @@ class TyperRun {
   }
 
   async fireHeartbeat(isWrite) {
+    // Clamp fileIndex: it can point one past the last file in the gap between
+    // a file finishing (onFileDone) and finish() marking the run done.
     const f = this.files[Math.min(this.fileIndex, this.files.length - 1)];
     if (!f) return;
     const res = await waka.sendHeartbeat(this.heartbeatFor(f, this.index, isWrite));
