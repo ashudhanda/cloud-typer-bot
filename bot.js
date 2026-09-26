@@ -154,7 +154,7 @@ function startBot() {
       if (f && fs.existsSync(f.outPath) && fs.statSync(f.outPath).size > 0) {
         await bot.sendDocument(chatId, f.outPath, { caption: 'partial (stopped mid-file)' }, { filename: f.fileName });
       }
-    } catch {}
+    } catch {} // best-effort: a failed file send must not break the stop flow
     await bot.sendMessage(
       chatId,
       `🛑 stopped at ${s.percent}% overall (file ${s.filesDone + 1}/${s.filesTotal}). completed files were already delivered. heartbeats sent so far (${s.heartbeatsSent}) stay on the dashboard.`
@@ -172,7 +172,7 @@ function startBot() {
             await bot.sendDocument(chatId, f.outPath, {}, { filename: f.fileName });
             sent += 1;
           }
-        } catch {}
+        } catch {} // best-effort: skipped files just lower the sent count
       }
     }
     if (!sent) {
@@ -186,7 +186,7 @@ function startBot() {
         try {
           await bot.sendDocument(chatId, f);
           sent += 1;
-        } catch {}
+        } catch {} // best-effort, same as above
       }
     }
     if (!sent) await bot.sendMessage(chatId, 'no file yet — load files and /start a run first.');
@@ -367,7 +367,7 @@ function startBot() {
         const f = run.files[fi];
         try {
           await bot.sendDocument(chatId, f.outPath, { caption: `✅ file ${fi + 1}/${run.files.length} done: ${f.fileName}` }, { filename: f.fileName });
-        } catch {}
+        } catch {} // best-effort: the file is safe in out/ even if telegram delivery fails
       },
       onFinish: async (run) => {
         const s = run.status();
