@@ -40,6 +40,8 @@ you give it code, tell it how long, and it:
 2. `/start` → pick duration → mode → speed → project → ▶ start
 3. `/status` to watch progress, `/stop` to end early (partial file is sent), `/getfile` to grab the file anytime
 
+finished files arrive on telegram automatically as each completes. launching a run consumes the queue — anything you upload mid-run stacks up for the next one.
+
 ### command reference
 
 | command | what it does |
