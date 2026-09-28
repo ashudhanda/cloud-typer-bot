@@ -74,6 +74,7 @@ file naming matters: the dashboard language comes from the extension, so `style.
 ## rules
 
 - realistic hours. 24h/day looks non-human on any system
+- custom durations are capped at 840 min (14h max) in the /start wizard
 - realtime by default, instant sparingly
 - don't run copilot chat / claude code on the same tracked account mid-run
 
