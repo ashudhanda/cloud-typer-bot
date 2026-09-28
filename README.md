@@ -60,7 +60,7 @@ file naming matters: the dashboard language comes from the extension, so `style.
 
 ## the two modes
 
-**realtime** — runs live for the full duration. heartbeats go out throttled (~1 per 2 min plus "saves"), same cadence as the real vscode plugin. safest and most natural — this is the default choice.
+**realtime** — runs live for the full duration. heartbeats go out throttled (~1 per 2 min plus "saves"), same cadence as the real vscode plugin. safest and most natural — recommended.
 
 **instant** — sends heartbeats covering the past N hours in one bulk sync. this is the same "offline sync" pattern the official plugins use when you code without internet and sync later. good as an occasional top-up. don't run it daily with huge numbers — keep your totals human (6–10h a day max).
 
