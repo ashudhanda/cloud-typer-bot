@@ -9,6 +9,9 @@ const OWNER_ID = String(process.env.OWNER_ID || '').trim();
 let bot = null;
 let currentRun = null;
 let queue = []; // [{ content, fileName }] — send as many files as you like, they stack up
+// Mid-wizard state for the /start flow. The steps run: duration → mode →
+// speed → project → confirm (with customDur/customProj detours in between),
+// and every chatId in here is waiting on an inline button or a free-text reply.
 const pending = new Map(); // chatId -> { step, durationMin, mode, speed, project }
 
 // The bot is deliberately wide open until OWNER_ID is set — otherwise /id
