@@ -219,6 +219,8 @@ class TyperRun {
     if (this.hbTimer) clearTimeout(this.hbTimer);
   }
 
+  // Mark the run done, clear both timers (no further typing or heartbeats),
+  // then hand the completed run back to the bot via onFinish.
   finish() {
     this.done = true;
     if (this.timer) clearTimeout(this.timer);
