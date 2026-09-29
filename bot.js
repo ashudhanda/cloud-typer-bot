@@ -395,6 +395,8 @@ function startBot() {
     }
   }
 
+  // the first step of the /start wizard: preset durations (2h-10h) as inline
+  // buttons, or a free-text prompt for a custom minute count (dur:custom).
   function askDuration(chatId) {
     pending.set(chatId, { step: 'duration' });
     bot.sendMessage(chatId, `loaded: ${queueSummary()}\n\npick total duration:`, {
