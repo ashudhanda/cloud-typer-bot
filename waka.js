@@ -1,5 +1,6 @@
 // these are read once at require time — changing an env var on a running
 // instance has no effect until the process restarts (redeploy on render).
+// normalize trailing slashes so the url joins below never produce "//users".
 const API_URL = (process.env.WAKA_API_URL || 'https://hackatime.hackclub.com/api/hackatime/v1').replace(/\/+$/, '');
 const API_KEY = process.env.WAKA_API_KEY || '';
 // user segment in the heartbeat url — 'current' works on wakatime; hackatime
@@ -11,6 +12,8 @@ const USER_SEGMENT = process.env.WAKA_USER || 'current';
 // on windows — blends in with the existing stats instead of showing "linux".
 const USER_AGENT = 'wakatime/v1.102.5 (windows-10.0.22631-x86_64) go1.22.5 vscode/1.95.3 vscode-wakatime/25.0.3';
 
+// wakatime auth is just the api key base64'd as a Basic credential —
+// the username part is unused, so the key itself goes through the encoder.
 function headers() {
   return {
     'Authorization': 'Basic ' + Buffer.from(API_KEY).toString('base64'),
