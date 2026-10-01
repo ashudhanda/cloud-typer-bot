@@ -185,6 +185,9 @@ class TyperRun {
       const f = this.files[fi];
       const localIdx = Math.min(globalIdx - prevBound, f.content.length);
       const atFileEnd = localIdx >= f.content.length - 1;
+      // every 15th beat is marked a "save" — the same ratio as the realtime
+      // loop — plus a save at the end of each file, so the backfilled pattern
+      // looks like a live typing session.
       beats.push(this.heartbeatFor(f, localIdx, i % 15 === 14 || atFileEnd, t));
       i += 1;
       t += rand(100, 135); // one beat every ~2 min, same cadence as a throttled plugin
