@@ -361,7 +361,9 @@ function startBot() {
     }
     pending.delete(chatId);
     const filesForRun = queue;
-    queue = []; // run owns its copy; new uploads stack for the next run
+    // rebind, don't clear: the active run takes the old queue, and anything
+    // uploaded mid-run lands in the fresh array for the NEXT run instead.
+    queue = [];
     currentRun = new TyperRun({
       files: filesForRun,
       project: p.project,
