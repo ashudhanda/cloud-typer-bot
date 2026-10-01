@@ -36,9 +36,21 @@ you give it code, tell it how long, and it:
 
 ## usage
 
-1. send the bot a code file (or paste 200+ chars of code)
+1. send the bot a code file (1MB max) or paste 200+ chars of code
 2. `/start` → pick duration → mode → speed → project → ▶ start
 3. `/status` to watch progress, `/stop` to end early (partial file is sent), `/getfile` to grab the file anytime
+
+### the /start wizard
+
+the wizard walks you through five steps:
+
+1. **duration** — preset buttons (2h, 4h, 6h, 8h, 10h) or a custom minute count (15–840, 14h max — keep it human)
+2. **mode** — realtime (types live, safest) or instant (backfills the hours in one bulk sync, top-up only)
+3. **speed** — slow / normal / fast typing pace
+4. **project** — quick-pick `webos`, `eswebsite`, or type a custom name
+5. **confirm** — shows the files, total hours, and an estimated heartbeat count before you hit ▶ start
+
+the total duration is split across your files by size — a bigger file gets a bigger share of the time.
 
 finished files arrive on telegram automatically as each completes. launching a run consumes the queue — anything you upload mid-run stacks up for the next one.
 
