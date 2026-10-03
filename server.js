@@ -13,4 +13,7 @@ app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
 app.listen(PORT, () => console.log(`health server on :${PORT}`));
 
+// starts last, after the health server binds its port — render marks the
+// service live only once something is listening, so telegram polling must
+// never block or precede the bind above.
 require('./bot').startBot();
