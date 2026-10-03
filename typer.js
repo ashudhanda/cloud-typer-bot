@@ -42,7 +42,7 @@ class TyperRun {
     this.project = opts.project || process.env.DEFAULT_PROJECT || 'myproject';
     this.durationMin = opts.durationMin;
     this.mode = opts.mode; // 'realtime' | 'instant'
-    this.speed = SPEED_PROFILES[opts.speed] || SPEED_PROFILES.normal;
+    this.speed = SPEED_PROFILES[opts.speed] || SPEED_PROFILES.normal; // unknown speed names fall back to normal — the wizard only offers known ones, so this is just a safety net
     this.fileIndex = 0; // which file is being typed
     this.index = 0; // char index inside the current file
     this.heartbeatsSent = 0;
@@ -158,6 +158,9 @@ class TyperRun {
       await this.fireHeartbeat(this.heartbeatsSent % 15 === 14); // every 15th beat = a "save"
       this.hbTimer = setTimeout(hbLoop, rand(105000, 135000));
     };
+    // the first beat fires after just 8s (not ~2 min) so the dashboard shows
+    // the run as active right away; the loop above then settles into the
+    // steady ~2min cadence for the rest of the run.
     this.hbTimer = setTimeout(hbLoop, 8000);
   }
 
