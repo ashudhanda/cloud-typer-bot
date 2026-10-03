@@ -115,6 +115,8 @@ function startBot() {
       return;
     }
     const name = (match[1] || '').trim();
+    // allowed: letters, digits, dot, dash, space (up to 80 chars) — anything
+    // else (slashes, quotes, ..) is rejected so renamed files stay safe on disk
     if (!/^[\w.\- ]{1,80}$/.test(name)) {
       bot.sendMessage(chatId, 'weird name — keep it simple, like style.css');
       return;
@@ -185,6 +187,7 @@ function startBot() {
         .map((f) => path.join(OUT_DIR, f))
         .filter((f) => fs.statSync(f).isFile() && fs.statSync(f).size > 0)
         .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+      // cap at the 5 newest files — a big out/ dir should never spam the chat
       for (const f of files.slice(0, 5)) {
         try {
           await bot.sendDocument(chatId, f);
