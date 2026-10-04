@@ -61,7 +61,7 @@ finished files arrive on telegram automatically as each completes. launching a r
 | `/start` | configure and launch a run (duration → mode → speed → project) |
 | `/status` | live progress — percent, ETA, heartbeats sent/failed |
 | `/stop` | end the run early; the partial file is sent |
-| `/getfile` | download the typed files |
+| `/getfile` | download the typed files — the current run's files first, falling back to the 5 newest files in `out/` |
 | `/queue` | see what's loaded |
 | `/clearqueue` | drop all loaded files |
 | `/name <file>` | rename the last loaded file |
