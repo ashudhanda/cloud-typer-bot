@@ -115,7 +115,7 @@ function startBot() {
       return;
     }
     const name = (match[1] || '').trim();
-    // allowed: letters, digits, dot, dash, space (up to 80 chars) — anything
+    // allowed: letters, digits, underscore, dot, dash, space (up to 80 chars) — anything
     // else (slashes, quotes, ..) is rejected so renamed files stay safe on disk
     if (!/^[\w.\- ]{1,80}$/.test(name)) {
       bot.sendMessage(chatId, 'weird name — keep it simple, like style.css');
