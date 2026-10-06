@@ -52,7 +52,7 @@ the wizard walks you through five steps:
 
 the total duration is split across your files by size — a bigger file gets a bigger share of the time.
 
-finished files arrive on telegram automatically as each completes. launching a run consumes the queue — anything you upload mid-run stacks up for the next one.
+finished files arrive on telegram automatically as each completes. launching a run consumes the queue — anything you upload mid-run stacks up for the next one. every run also saves its files to `out/` with a timestamped filename, so reruns never overwrite earlier ones.
 
 ### command reference
 
