@@ -14,6 +14,8 @@ const SPEED_PROFILES = {
   fast: { pace: 0.7 },
 };
 
+// uniform random float in [min, max) — every pacing jitter below (typing
+// pauses, heartbeat intervals, break lengths) flows through this one helper.
 const rand = (min, max) => min + Math.random() * (max - min);
 
 class TyperRun {
