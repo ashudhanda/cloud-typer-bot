@@ -179,6 +179,9 @@ class TyperRun {
       bounds.push(acc);
     }
 
+    // sweep from the run's start to now, emitting one heartbeat every ~2 min
+    // (the same cadence as the realtime loop) and mapping each timestamp back
+    // to the file the typist would have been on at that moment.
     let t = start;
     let i = 0;
     while (t < now) {
