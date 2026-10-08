@@ -6,6 +6,10 @@ const { TyperRun, OUT_DIR } = require('./typer');
 const TOKEN = process.env.BOT_TOKEN;
 const OWNER_ID = String(process.env.OWNER_ID || '').trim();
 
+// hard cap on uploaded source files — keeps memory bounded and matches the
+// "1MB max" the bot's own messages and the README promise.
+const MAX_UPLOAD_BYTES = 1024 * 1024;
+
 let bot = null;
 let currentRun = null;
 let queue = []; // [{ content, fileName }] — send as many files as you like, they stack up
@@ -210,7 +214,7 @@ function startBot() {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     try {
-      if (msg.document.file_size && msg.document.file_size > 1024 * 1024) {
+      if (msg.document.file_size && msg.document.file_size > MAX_UPLOAD_BYTES) {
         await bot.sendMessage(chatId, 'file too big (1MB max) — code files should be tiny.');
         return;
       }
