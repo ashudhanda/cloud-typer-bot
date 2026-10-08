@@ -64,9 +64,15 @@ class TyperRun {
     return `C:\\Users\\WELCOME\\${this.project}\\${f.fileName}`;
   }
 
-  // Binary-search the precomputed line-start offsets to find which line a
-  // character index falls on. Returns the 1-based line number and the 1-based
-  // cursor column the wakatime heartbeat payload expects.
+  /**
+   * Binary-search the precomputed line-start offsets to find which line a
+   * character index falls on.
+   *
+   * @param {object} f   normalized file from the constructor (lineStarts, content)
+   * @param {number} idx 0-based character index inside the file
+   * @returns {{lineno: number, cursorpos: number}} 1-based line number and
+   *          1-based cursor column, the shape the wakatime heartbeat payload expects
+   */
   lineInfo(f, idx) {
     const arr = f.lineStarts;
     let lo = 0;
