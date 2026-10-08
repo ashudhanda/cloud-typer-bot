@@ -181,12 +181,19 @@ function startBot() {
       }
     }
     if (!sent) {
-      // fall back to the newest files in the out dir
+      // fall back to the newest files in the out dir. Dirent.isFile() skips
+      // the first statSync, and one shared stat per file feeds both the size
+      // filter and the mtime sort — the old chain stat'ed every file 3+ times.
       const files = fs
-        .readdirSync(OUT_DIR)
-        .map((f) => path.join(OUT_DIR, f))
-        .filter((f) => fs.statSync(f).isFile() && fs.statSync(f).size > 0)
-        .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+        .readdirSync(OUT_DIR, { withFileTypes: true })
+        .filter((d) => d.isFile())
+        .map((d) => {
+          const p = path.join(OUT_DIR, d.name);
+          return { p, st: fs.statSync(p) };
+        })
+        .filter((e) => e.st.size > 0)
+        .sort((a, b) => b.st.mtimeMs - a.st.mtimeMs)
+        .map((e) => e.p);
       // cap at the 5 newest files — a big out/ dir should never spam the chat
       for (const f of files.slice(0, 5)) {
         try {
