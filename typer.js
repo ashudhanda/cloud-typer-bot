@@ -90,6 +90,16 @@ class TyperRun {
     return { lineno: ans + 1, cursorpos: idx - arr[ans] + 1 };
   }
 
+  /**
+   * Build the heartbeat payload for the current cursor position. idx is
+   * clamped to the file bounds; timeOverride (unix seconds) lets instant
+   * mode backdate beats, while realtime leaves it unset for "now".
+   *
+   * @param {object} f normalized file from the constructor
+   * @param {number} idx 0-based char index of the cursor
+   * @param {boolean} isWrite true = save beat, false = passive typing beat
+   * @param {number} [timeOverride] unix-seconds timestamp for backfilled beats
+   */
   heartbeatFor(f, idx, isWrite, timeOverride) {
     const clamped = Math.max(0, Math.min(idx, f.content.length));
     const { lineno, cursorpos } = this.lineInfo(f, clamped);
