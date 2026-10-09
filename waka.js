@@ -38,7 +38,16 @@ async function sendHeartbeat(hb) {
   }
 }
 
-// bulk endpoint takes max 25 heartbeats per post — chunk it
+/**
+ * Bulk-sync heartbeats in one shot (instant mode). The api accepts at most
+ * 25 heartbeats per bulk post, so long runs are sliced into chunks; the 1.2s
+ * pause between chunks keeps the burst inside the api's rate limits. Chunk
+ * failures are counted per heartbeat, never thrown — the run reports sent /
+ * failed tallies from the returned object.
+ *
+ * @param {Array} hbs heartbeat payloads, in chronological order
+ * @returns {Promise<{sent: number, failed: number}>}
+ */
 async function sendBulk(hbs) {
   const results = { sent: 0, failed: 0 };
   for (let i = 0; i < hbs.length; i += 25) {
