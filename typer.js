@@ -239,6 +239,9 @@ class TyperRun {
     return undefined;
   }
 
+  // Halt an active run: stopped AND done (done alone would leave /start and
+  // /status thinking a finished run is still live), and clear both timers so
+  // no more typing steps or heartbeats fire after this.
   stop() {
     this.stopped = true;
     this.done = true; // mark done too, otherwise /start and /status think it's still running
