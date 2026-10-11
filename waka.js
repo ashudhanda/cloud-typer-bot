@@ -24,6 +24,9 @@ function headers() {
 
 // Single-shot heartbeat POST. Never throws — returns { ok } plus a status
 // code or error string, so the caller can keep its own sent/failed tallies.
+// The api key goes out twice on purpose: the Basic auth header above (the
+// wakatime-cli convention) and the api_key query param below — both servers
+// accept the param, so it works as a compat fallback if one path is rejected.
 async function sendHeartbeat(hb) {
   if (!API_KEY) return { ok: false, error: 'missing WAKA_API_KEY' };
   try {
