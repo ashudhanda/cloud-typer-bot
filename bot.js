@@ -331,6 +331,8 @@ function startBot() {
     }
 
     if (msg.text.length >= 200) {
+      // 200 chars is the "real code" floor from the README — anything shorter
+      // is probably a chat reply, not a file worth queueing for typing.
       queue.push({ content: msg.text, fileName: 'pasted-code.txt' });
       const busy = currentRun && !currentRun.done;
       await bot.sendMessage(
