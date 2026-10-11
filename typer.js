@@ -59,8 +59,13 @@ class TyperRun {
     this.totalCharsAll = this.files.reduce((s, f) => s + f.content.length, 0);
   }
 
+  /**
+   * Spoofed file path shown on the dashboard. A static windows-style path
+   * blends the run with the existing machine's stats (see the README's
+   * "how the dashboard reads it") instead of exposing the render box —
+   * only the language (from the extension) and project are real.
+   */
   entityFor(f) {
-    // windows-style path so stats blend with the existing machine
     return `C:\\Users\\WELCOME\\${this.project}\\${f.fileName}`;
   }
 
