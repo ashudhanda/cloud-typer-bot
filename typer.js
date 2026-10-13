@@ -141,8 +141,11 @@ class TyperRun {
       // bigger file gets a bigger share of the total duration
       const share = f.content.length / Math.max(1, this.totalCharsAll);
       const fileMs = Math.max(30000, totalMs * share);
+      // per-char base delay: the file's share of the total run time divided
+      // by its char count, scaled by the speed pace (slow 1.35x ... fast
+      // 0.7x). the 20ms floor stops long files collapsing to zero-delay bursts.
       const baseDelay = Math.max(20, (fileMs / Math.max(1, f.content.length)) * this.speed.pace);
-      fs.writeFileSync(f.outPath, '');
+      fs.writeFileSync(f.outPath, ''); // fresh file — realtime appends chars below, instant mode writes it whole later
 
       const step = () => {
         if (this.stopped || this.done) return;
