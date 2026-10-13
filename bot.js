@@ -301,6 +301,8 @@ function startBot() {
     } catch (e) {
       console.error('callback error:', e);
     }
+    // every callback_query must be answered or the inline button keeps its
+    // loading spinner — the empty catch covers races where it already timed out.
     bot.answerCallbackQuery(q.id).catch(() => {});
   });
 
@@ -325,6 +327,8 @@ function startBot() {
     }
 
     if (p && p.step === 'customProj') {
+      // sanitize the free-text name: lowercased, stripped to letters / digits /
+      // dash / underscore / space — always safe for the dashboard and filenames.
       p.project = msg.text.trim().toLowerCase().replace(/[^a-z0-9\-_ ]/g, '') || 'myproject';
       await showConfirm(chatId, p);
       return;
