@@ -88,6 +88,7 @@ file naming matters: the dashboard language comes from the extension, so `style.
 - realistic hours. 24h/day looks non-human on any system
 - custom durations are capped at 840 min (14h max) in the /start wizard
 - realtime by default, instant sparingly
+- one run at a time — `/start` won't launch a new run while one is active; check `/status` or end it with `/stop`
 - until `OWNER_ID` is set the bot is unlocked — anyone who finds it can use it. don't share the bot username until after setup step 7
 - never commit your `.env` — it holds the bot token and api key. `.gitignore` already excludes it; `.env.example` is the template to copy from
 - don't run copilot chat / claude code on the same tracked account mid-run
