@@ -4,6 +4,8 @@
   "private": true,
   "description": "telegram-controlled cloud typer that logs wakatime/hackatime heartbeats",
   "main": "server.js",
+  "private": true,
+  "license": "UNLICENSED",
   "scripts": {
     "start": "node server.js"
   },
