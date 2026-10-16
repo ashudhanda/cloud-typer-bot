@@ -1,3 +1,7 @@
+// Telegram surface of cloud-typer-bot: commands, the /start wizard, file
+// uploads and the live run. Typing + heartbeat mechanics live in typer.js;
+// waka.js talks to the hackatime/wakatime api. Boot order (health server
+// first, bot last) is in server.js — this file only exports startBot().
 const fs = require('fs');
 const path = require('path');
 const TelegramBot = require('node-telegram-bot-api');
