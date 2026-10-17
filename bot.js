@@ -202,10 +202,13 @@ function startBot() {
         .filter((e) => e.st.size > 0)
         .sort((a, b) => b.st.mtimeMs - a.st.mtimeMs)
         .map((e) => e.p);
-      // cap at the 5 newest files — a big out/ dir should never spam the chat
+      // cap at the 5 newest files — a big out/ dir should never spam the chat.
+      // captions name each fallback file: without them a chat full of
+      // timestamped out/ filenames is hard to tell apart.
       for (const f of files.slice(0, 5)) {
         try {
-          await bot.sendDocument(chatId, f);
+          const caption = path.basename(f);
+          await bot.sendDocument(chatId, f, { caption }, { filename: caption });
           sent += 1;
         } catch {} // best-effort, same as above
       }
