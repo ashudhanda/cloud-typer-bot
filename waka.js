@@ -71,8 +71,9 @@ async function sendBulk(hbs) {
       console.error('bulk heartbeat error:', String(err));
     }
     // 1.2s pause between chunks — instant mode can fire dozens of posts in a
-    // burst, so this keeps the bulk sync inside the api's rate limits.
-    await new Promise((r) => setTimeout(r, 1200));
+    // burst, so this keeps the bulk sync inside the api's rate limits. no
+    // pause after the final chunk: the sync is over, nothing else is waiting.
+    if (i + 25 < hbs.length) await new Promise((r) => setTimeout(r, 1200));
   }
   return results;
 }
