@@ -225,7 +225,11 @@ function startBot() {
       const link = await bot.getFileLink(msg.document.file_id);
       const res = await fetch(link);
       const text = await res.text();
-      queue.push({ content: text, fileName: msg.document.file_name || 'uploaded-code.txt' });
+      // sanitize the telegram-provided filename — it could contain slashes or
+      // "..", which would walk out of out/ when typer.js builds the outPath.
+      // basename keeps normal names ("style.css") exactly as-is.
+      const safeName = path.basename(msg.document.file_name || 'uploaded-code.txt') || 'uploaded-code.txt';
+      queue.push({ content: text, fileName: safeName });
       const busy = currentRun && !currentRun.done;
       await bot.sendMessage(
         chatId,
