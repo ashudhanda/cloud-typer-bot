@@ -83,6 +83,14 @@ file naming matters: the dashboard language comes from the extension, so `style.
 - editor/os ← we send the vscode-on-windows user agent, so it blends with your existing stats instead of showing a random linux box
 - category ← plain `coding`, which counts as human coding, never ai
 
+## file map
+
+- `server.js` — boots the express health server first (`/` + `/health`), then starts the telegram bot
+- `bot.js` — the whole telegram surface: commands, the `/start` wizard, file uploads, and delivering finished files
+- `typer.js` — `TyperRun`: realtime char-by-char typing with human pacing, or instant backfill; owns the per-run state and the `/status` snapshot
+- `waka.js` — heartbeat payloads and POSTs to the hackatime/wakatime api (single + bulk)
+- `out/` — gitignored; every run's typed files land here with a timestamped name, so reruns never overwrite earlier ones
+
 ## rules
 
 - realistic hours. 24h/day looks non-human on any system
