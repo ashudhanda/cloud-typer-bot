@@ -163,6 +163,9 @@ function startBot() {
     const s = currentRun.status();
     // send whatever got typed in the current (partial) file
     try {
+      // clamp fileIndex: it can point one past the last file in the gap
+      // between a file finishing (onFileDone) and finish() marking the run
+      // done — same clamp as typer.js's fireHeartbeat.
       const f = currentRun.files[Math.min(currentRun.fileIndex, currentRun.files.length - 1)];
       if (f && fs.existsSync(f.outPath) && fs.statSync(f.outPath).size > 0) {
         await bot.sendDocument(chatId, f.outPath, { caption: 'partial (stopped mid-file)' }, { filename: f.fileName });
