@@ -132,6 +132,14 @@ class TyperRun {
     }
   }
 
+  /**
+   * Live typing loop on timers. Each file gets a share of the total duration
+   * proportional to its size; chars land in 1-4 bursts with human jitter, a
+   * longer pause at line ends and an occasional thinking pause. A separate
+   * ~2min heartbeat loop runs alongside (first beat after 8s so the
+   * dashboard lights up right away). Both timers live on this.timer /
+   * this.hbTimer so stop() can clear them.
+   */
   startRealtime() {
     const totalMs = this.durationMin * 60 * 1000;
 
