@@ -119,6 +119,13 @@ class TyperRun {
     });
   }
 
+  /**
+   * Fire one heartbeat for the current cursor position. Never throws —
+   * bumps the heartbeatsSent/heartbeatsFailed tallies so /status can
+   * report them.
+   *
+   * @param {boolean} isWrite true = save beat, false = passive typing beat
+   */
   async fireHeartbeat(isWrite) {
     // Clamp fileIndex: it can point one past the last file in the gap between
     // a file finishing (onFileDone) and finish() marking the run done.
