@@ -58,6 +58,8 @@ function startBot() {
   bot = new TelegramBot(TOKEN, { polling: true });
   bot.on('polling_error', (e) => console.error('polling error:', e.message));
 
+  // /id: replies with the sender's chat id — the number that goes into
+  // OWNER_ID to lock the bot down. Works even while the bot is unlocked.
   bot.onText(/\/id/, (msg) => {
     bot.sendMessage(msg.chat.id, `your chat id: ${msg.chat.id}`);
   });
