@@ -64,7 +64,7 @@ finished files arrive on telegram automatically as each completes. launching a r
 | `/getfile` | download the typed files — the current run's files first, falling back to the 5 newest files in `out/` |
 | `/queue` | see what's loaded |
 | `/clearqueue` | drop all loaded files |
-| `/name <file>` | rename the last loaded file |
+| `/name <file>` | rename the last loaded file (letters, digits, `_ . -` and space only, max 80 chars — the bot rejects anything else to keep filenames safe on disk) |
 | `/id` | your chat id (for `OWNER_ID`) |
 | `/help` | list of commands |
 
