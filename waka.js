@@ -11,6 +11,9 @@ const USER_SEGMENT = process.env.WAKA_USER || 'current';
 // editor + os from the User-Agent header. so we mirror the vscode plugin agent
 // on windows — blends in with the existing stats instead of showing "linux".
 const USER_AGENT = 'wakatime/v1.102.5 (windows-10.0.22631-x86_64) go1.22.5 vscode/1.95.3 vscode-wakatime/25.0.3';
+// pinned to a real plugin release — don't bump these versions casually. if you
+// update it, match an actual vscode-wakatime release (agent + plugin versions)
+// so the beats stay indistinguishable from a genuine plugin install.
 
 // wakatime auth is just the api key base64'd as a Basic credential —
 // the username part is unused, so the key itself goes through the encoder.
