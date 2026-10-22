@@ -191,6 +191,8 @@ class TyperRun {
       };
       step();
     };
+    // small delay before the first file starts typing (kick off on the next
+    // tick rather than synchronously inside the telegram message handler).
     this.timer = setTimeout(runFile, 500);
 
     // throttled like the real plugin: ~1 heartbeat per 2 min while active, plus saves
