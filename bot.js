@@ -73,7 +73,7 @@ function startBot() {
         '/start — configure + launch a run\n' +
         '/status — live progress\n' +
         '/stop — end run, get the partial file\n' +
-        '/getfile — download the typed files (the current run first, else the newest in out/)\n' +
+        '/getfile — download the typed files (the current run first, else the 5 newest in out/)\n' +
         '/queue — see what\'s loaded\n' +
         '/clearqueue — drop all loaded files\n' +
         '/name <file> — rename the last loaded file\n' +
