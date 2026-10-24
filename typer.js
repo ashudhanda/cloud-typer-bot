@@ -44,7 +44,9 @@ class TyperRun {
     this.project = opts.project || process.env.DEFAULT_PROJECT || 'myproject';
     this.durationMin = opts.durationMin;
     this.mode = opts.mode; // 'realtime' | 'instant'
-    this.speed = SPEED_PROFILES[opts.speed] || SPEED_PROFILES.normal; // unknown speed names fall back to normal — the wizard only offers known ones, so this is just a safety net
+    // Unknown speed names fall back to normal — the wizard only offers known
+    // ones, so this is just a safety net.
+    this.speed = SPEED_PROFILES[opts.speed] || SPEED_PROFILES.normal;
     this.fileIndex = 0; // which file is being typed
     this.index = 0; // char index inside the current file
     this.heartbeatsSent = 0;
