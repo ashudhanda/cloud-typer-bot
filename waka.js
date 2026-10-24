@@ -55,7 +55,10 @@ async function sendHeartbeat(hb) {
  * 25 heartbeats per bulk post, so long runs are sliced into chunks; the 1.2s
  * pause between chunks keeps the burst inside the api's rate limits. Chunk
  * failures are counted per heartbeat, never thrown — the run reports sent /
- * failed tallies from the returned object.
+ * failed tallies from the returned object. Unlike sendHeartbeat, there is no
+ * early return when WAKA_API_KEY is unset: the bulk posts go out with an
+ * empty key, fail, and land in the failed tally, so a missing key shows up
+ * as failed beats rather than a silent no-op.
  *
  * @param {Array} hbs heartbeat payloads, in chronological order
  * @returns {Promise<{sent: number, failed: number}>}
