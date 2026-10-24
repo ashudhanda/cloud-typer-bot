@@ -89,7 +89,7 @@ file naming matters: the dashboard language comes from the extension, so `style.
 - `bot.js` — the whole telegram surface: commands, the `/start` wizard, file uploads, and delivering finished files
 - `typer.js` — `TyperRun`: realtime char-by-char typing with human pacing, or instant backfill; owns the per-run state and the `/status` snapshot
 - `waka.js` — heartbeat payloads and POSTs to the hackatime/wakatime api (single + bulk)
-- `out/` — gitignored; every run's typed files land here with a timestamped name, so reruns never overwrite earlier ones
+- `out/` — gitignored; created automatically at boot by `typer.js`, so no manual setup — every run's typed files land here with a timestamped name, so reruns never overwrite earlier ones
 
 ## rules
 
