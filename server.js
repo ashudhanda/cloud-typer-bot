@@ -2,6 +2,9 @@
 // needs a bound port to mark the service live, and UptimeRobot pings
 // `/health` to keep the free instance awake — the bot's long-polling then
 // runs on top of it.
+// dotenv must load before ./bot is required below: bot.js reads BOT_TOKEN
+// and OWNER_ID at require time, so requiring it first would lock in empty
+// values for the whole process even if .env were loaded afterwards.
 require('dotenv').config();
 const express = require('express');
 
