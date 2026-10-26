@@ -350,6 +350,9 @@ function startBot() {
       return;
     }
 
+    // Anything shorter falls through silently: a short free-text message is
+    // most likely a chat reply, not code, so it is ignored rather than
+    // queued — only 200+ char pastes become files.
     if (msg.text.length >= 200) {
       // 200 chars is the "real code" floor from the README — anything shorter
       // is probably a chat reply, not a file worth queueing for typing.
