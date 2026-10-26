@@ -86,6 +86,8 @@ file naming matters: the dashboard language comes from the extension, so `style.
 ## file map
 
 - `server.js` — boots the express health server first (`/` + `/health`), then starts the telegram bot
+- `package.json` — `npm start` entry point (`server.js`) and the three dependencies (dotenv, express, node-telegram-bot-api)
+- `.env.example` — placeholder template for the env vars in the setup table above; copy it to `.env` and fill it in (`.env` itself is gitignored)
 - `bot.js` — the whole telegram surface: commands, the `/start` wizard, file uploads, and delivering finished files
 - `typer.js` — `TyperRun`: realtime char-by-char typing with human pacing, or instant backfill; owns the per-run state and the `/status` snapshot
 - `waka.js` — heartbeat payloads and POSTs to the hackatime/wakatime api (single + bulk)
