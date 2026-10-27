@@ -210,6 +210,13 @@ class TyperRun {
     this.hbTimer = setTimeout(hbLoop, 8000);
   }
 
+  /**
+   * Instant mode: backfill the whole run in one bulk sync instead of
+   * typing live. Heartbeats are swept from the run's start to now at the
+   * realtime ~2min cadence, each mapped back to the file in progress at
+   * that moment; the finished files are then written whole to out/ and
+   * delivered via onFileDone, and the run finishes immediately.
+   */
   async startInstant() {
     const now = Date.now() / 1000;
     const start = now - this.durationMin * 60;
