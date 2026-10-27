@@ -17,6 +17,12 @@ const USER_AGENT = 'wakatime/v1.102.5 (windows-10.0.22631-x86_64) go1.22.5 vscod
 
 // wakatime auth is just the api key base64'd as a Basic credential —
 // the username part is unused, so the key itself goes through the encoder.
+/**
+ * Headers shared by every heartbeat POST: Basic auth from the api key,
+ * the pinned vscode-plugin User-Agent, and JSON content type.
+ *
+ * @returns {object} Authorization, User-Agent and Content-Type headers
+ */
 function headers() {
   return {
     'Authorization': 'Basic ' + Buffer.from(API_KEY).toString('base64'),
