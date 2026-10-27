@@ -102,6 +102,8 @@ async function sendBulk(hbs) {
  * @param {number} cursorpos 1-based cursor column
  * @param {number} lines     total lines in the file
  * @param {boolean} isWrite  true = file save, false = passive editing
+ * @returns {object} wakatime heartbeat payload (entity, type, category,
+ *          time, project, lineno, cursorpos, lines, is_write)
  */
 function makeHeartbeat({ entity, project, time, lineno, cursorpos, lines, isWrite }) {
   return {
