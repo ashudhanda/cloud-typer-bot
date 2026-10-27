@@ -106,6 +106,7 @@ class TyperRun {
    * @param {number} idx 0-based char index of the cursor
    * @param {boolean} isWrite true = save beat, false = passive typing beat
    * @param {number} [timeOverride] unix-seconds timestamp for backfilled beats
+   * @returns {object} wakatime heartbeat payload for the clamped cursor position
    */
   heartbeatFor(f, idx, isWrite, timeOverride) {
     const clamped = Math.max(0, Math.min(idx, f.content.length));
