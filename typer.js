@@ -2,6 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const waka = require('./waka');
 
+// Typed output lands here: one timestamped file per queued source file,
+// named so reruns never overwrite earlier runs. Created at require time so
+// the bot's /getfile fallback can always list it, even before any run.
 const OUT_DIR = path.join(__dirname, 'out');
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
