@@ -50,6 +50,13 @@ function queueSummary() {
   return `${queue.length} file${queue.length > 1 ? 's' : ''} (${total.toLocaleString()} chars) — ${names}`;
 }
 
+/**
+ * Start Telegram long-polling. Guards on BOT_TOKEN (logs and returns
+ * without polling when unset, so the health server in server.js still
+ * stays up); registers every command, upload, callback and free-text
+ * handler above, then hands the live run to the /start wizard. Called
+ * once, last, from server.js after the health server binds its port.
+ */
 function startBot() {
   if (!TOKEN) {
     console.error('BOT_TOKEN missing — set it in env vars');
