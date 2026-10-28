@@ -396,6 +396,11 @@ function startBot() {
     );
   }
 
+  // Launch a run from the wizard's confirmed pending state. Guards against
+  // a run already active and an emptied queue, then hands the queued files
+  // to a new TyperRun wired with onFileDone (delivers each finished file to
+  // the chat) and onFinish (posts the run summary). The queue rebind below
+  // is deliberate — see the inline comment there.
   async function launchRun(chatId, p) {
     if (currentRun && !currentRun.done) {
       await bot.sendMessage(chatId, 'already running. /stop first.');
