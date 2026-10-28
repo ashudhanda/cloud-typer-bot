@@ -19,6 +19,20 @@ const SPEED_PROFILES = {
 const rand = (min, max) => min + Math.random() * (max - min);
 
 class TyperRun {
+  /**
+   * Build a run from the bot's wizard options. Normalizes each queued file
+   * (see the inline comment below) and snapshots the run config; timers
+   * and tallies start empty until start() is called.
+   *
+   * @param {object} opts
+   * @param {Array<{content: string, fileName: string}>} opts.files queued source files
+   * @param {string} [opts.project] dashboard project name (or DEFAULT_PROJECT env, else 'myproject')
+   * @param {number} opts.durationMin total run duration in minutes
+   * @param {string} opts.mode 'realtime' | 'instant'
+   * @param {string} [opts.speed] 'slow' | 'normal' | 'fast' (unknown names fall back to normal)
+   * @param {Function} [opts.onFileDone] called with (run, fileIndex) per finished file
+   * @param {Function} [opts.onFinish] called with (run) when the run completes
+   */
   constructor(opts) {
     // Normalize each queued file up front: \r\n -> \n so char math matches the
     // content we type and send; precompute line-start offsets so lineInfo()
