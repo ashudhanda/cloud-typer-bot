@@ -25,6 +25,14 @@ const pending = new Map(); // chatId -> { step, durationMin, mode, speed, projec
 // The bot is deliberately wide open until OWNER_ID is set — otherwise /id
 // (the way you learn your chat id) would have no way to run on first boot.
 // Once set, every command, upload and callback below refuses non-owner ids.
+/**
+ * Owner gate for every handler below. Returns true for any chat while
+ * OWNER_ID is unset (the bot is unlocked on first boot so /id can run),
+ * and only for the matching chat id once OWNER_ID is set.
+ *
+ * @param {number|string} chatId Telegram chat id of the sender
+ * @returns {boolean} true when the sender may use the bot
+ */
 function isOwner(chatId) {
   if (!OWNER_ID) return true; // unlocked until OWNER_ID is set
   return String(chatId) === OWNER_ID;
