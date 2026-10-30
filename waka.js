@@ -1,6 +1,7 @@
-// these are read once at require time — changing an env var on a running
+// Env config, read once at require time: changing an env var on a running
 // instance has no effect until the process restarts (redeploy on render).
-// normalize trailing slashes so the url joins below never produce "//users".
+// The base url is normalized (trailing slashes stripped) so the url joins
+// below never produce "//users".
 const API_URL = (process.env.WAKA_API_URL || 'https://hackatime.hackclub.com/api/hackatime/v1').replace(/\/+$/, '');
 const API_KEY = process.env.WAKA_API_KEY || '';
 // user segment in the heartbeat url — 'current' works on wakatime; hackatime
