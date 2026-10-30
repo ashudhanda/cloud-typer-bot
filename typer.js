@@ -282,8 +282,15 @@ class TyperRun {
     this.finish();
   }
 
-  // instant backfills everything in one promise; realtime runs on timers and
-  // returns nothing — track it via .done or the bot's /status.
+  /**
+   * Start the run in the configured mode. Instant mode backfills everything
+   * in one promise (await it); realtime runs on timers and returns
+   * undefined — track it via .done or the bot's /status.
+   *
+   * @throws {Error} when no files are queued
+   * @returns {Promise<void>|undefined} the instant-mode promise, or
+   *          undefined for a realtime run
+   */
   start() {
     if (!this.files.length) throw new Error('no files queued');
     if (this.mode === 'instant') return this.startInstant();
@@ -291,9 +298,11 @@ class TyperRun {
     return undefined;
   }
 
-  // Halt an active run: stopped AND done (done alone would leave /start and
-  // /status thinking a finished run is still live), and clear both timers so
-  // no more typing steps or heartbeats fire after this.
+  /**
+   * Halt an active run: sets stopped AND done (done alone would leave
+   * /start and /status thinking a finished run is still live), and clears
+   * both timers so no more typing steps or heartbeats fire after this.
+   */
   stop() {
     this.stopped = true;
     this.done = true; // mark done too, otherwise /start and /status think it's still running
@@ -310,12 +319,18 @@ class TyperRun {
     this.onFinish(this);
   }
 
-  // Point-in-time snapshot of the run, consumed by the bot's /status command.
-  // percent/charsDone/charsTotal track typing progress; elapsedMin is measured
-  // from construction while etaMin is remaining scheduled time for realtime
-  // runs (0 in instant mode; an early stop keeps counting down to the
-  // scheduled end, so it may read > 0 after /stop). filesDone counts completed
-  // files, so the currently-typing file is filesDone + 1.
+  /**
+   * Point-in-time snapshot of the run, consumed by the bot's /status command.
+   * percent/charsDone/charsTotal track typing progress; elapsedMin is measured
+   * from construction while etaMin is remaining scheduled time for realtime
+   * runs (0 in instant mode; an early stop keeps counting down to the
+   * scheduled end, so it may read > 0 after /stop). filesDone counts completed
+   * files, so the currently-typing file is filesDone + 1.
+   *
+   * @returns {object} run snapshot (percent, charsDone/charsTotal,
+   *          filesDone/filesTotal, currentFile, elapsedMin, etaMin,
+   *          heartbeatsSent/heartbeatsFailed, done, stopped, mode, project)
+   */
   status() {
     const completedChars =
       this.mode === 'instant' && this.done
