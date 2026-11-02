@@ -9,7 +9,9 @@ require('dotenv').config();
 const express = require('express');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // render injects PORT; 3000 is for local runs
+// Parsed as a number: passing a non-numeric PORT string straight to
+// listen() would make express treat it as a unix-socket path, not a port.
+const PORT = Number.parseInt(process.env.PORT, 10) || 3000; // render injects PORT; 3000 is for local runs
 
 // '/' only proves the service is up — uptimerobot and render's health checks live on /health.
 app.get('/', (_req, res) => res.send('cloud-typer-bot alive'));
