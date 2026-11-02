@@ -315,7 +315,14 @@ function startBot() {
           },
         });
       } else if (data.startsWith('proj:')) {
-        if (data === 'proj:custom') {
+        // Stale-button guard: after a restart the pending map is empty, so
+        // an old project button arrives with no duration/mode/speed. Letting
+        // it through would confirm a run with undefined options (see the
+        // go:start guard below), so expire the wizard instead.
+        if (p.durationMin == null || !p.mode || !p.speed) {
+          pending.delete(chatId);
+          await bot.sendMessage(chatId, 'that button is from an old wizard (the bot restarted since) — /start to begin again.');
+        } else if (data === 'proj:custom') {
           p.step = 'customProj';
           pending.set(chatId, p);
           await bot.sendMessage(chatId, 'type the project name:');
@@ -324,7 +331,16 @@ function startBot() {
           await showConfirm(chatId, p);
         }
       } else if (data === 'go:start') {
-        await launchRun(chatId, p);
+        // Same stale-button guard as the proj: branch: a ▶ start tapped on
+        // a pre-restart confirm screen has step !== 'confirm' (or an empty
+        // pending entry), and launching it would build a TyperRun with
+        // undefined duration/mode/speed. Expire it instead of launching.
+        if (p.step !== 'confirm') {
+          pending.delete(chatId);
+          await bot.sendMessage(chatId, 'that start button is from an old wizard (the bot restarted since) — /start to begin again.');
+        } else {
+          await launchRun(chatId, p);
+        }
       } else if (data === 'go:cancel') {
         pending.delete(chatId);
         await bot.sendMessage(chatId, 'cancelled. /start to begin again.');
