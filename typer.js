@@ -329,8 +329,8 @@ class TyperRun {
    * Point-in-time snapshot of the run, consumed by the bot's /status command.
    * percent/charsDone/charsTotal track typing progress; elapsedMin is measured
    * from construction while etaMin is remaining scheduled time for realtime
-   * runs (0 in instant mode; an early stop keeps counting down to the
-   * scheduled end, so it may read > 0 after /stop). filesDone counts completed
+   * runs (0 in instant mode, and 0 once the run is done or stopped — a
+   * finished run has nothing left to wait for). filesDone counts completed
    * files, so the currently-typing file is filesDone + 1.
    *
    * @returns {object} run snapshot (percent, charsDone/charsTotal,
@@ -344,7 +344,7 @@ class TyperRun {
         : this.files.slice(0, this.fileIndex).reduce((s, f) => s + f.content.length, 0) + this.index;
     const pct = this.totalCharsAll ? (completedChars / this.totalCharsAll) * 100 : 100;
     const elapsedMin = (Date.now() - this.startedAt) / 60000;
-    const etaMin = this.mode === 'instant' ? 0 : Math.max(0, this.durationMin - elapsedMin);
+    const etaMin = this.mode === 'instant' || this.done ? 0 : Math.max(0, this.durationMin - elapsedMin);
     const cur = this.files[Math.min(this.fileIndex, this.files.length - 1)];
     return {
       stopped: this.stopped,
