@@ -293,6 +293,12 @@ class TyperRun {
    */
   start() {
     if (!this.files.length) throw new Error('no files queued');
+    // A non-finite or non-positive duration would silently poison every
+    // timer below (NaN delays fire immediately, NaN shares break file
+    // pacing), so fail loudly here instead of starting a broken run.
+    if (!Number.isFinite(this.durationMin) || this.durationMin <= 0) {
+      throw new Error('invalid durationMin');
+    }
     if (this.mode === 'instant') return this.startInstant();
     this.startRealtime();
     return undefined;
