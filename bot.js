@@ -247,6 +247,9 @@ function startBot() {
       }
       const link = await bot.getFileLink(msg.document.file_id);
       const res = await fetch(link);
+      // fetch() only throws on network failure, not on HTTP errors — without
+      // this check a 404/expired link body would be queued as "code".
+      if (!res.ok) throw new Error(`file download failed: ${res.status}`);
       const text = await res.text();
       // sanitize the telegram-provided filename — it could contain slashes or
       // "..", which would walk out of out/ when typer.js builds the outPath.
