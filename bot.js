@@ -276,7 +276,17 @@ function startBot() {
         return;
       }
       const link = await bot.getFileLink(msg.document.file_id);
-      const res = await fetch(link);
+      // Telegram file links can stall — abort after 30s instead of hanging
+      // the handler (and the queue) on a dead download. The outer catch
+      // already reports the failure to the chat.
+      const dlCtrl = new AbortController();
+      const dlTimer = setTimeout(() => dlCtrl.abort(), 30000);
+      let res;
+      try {
+        res = await fetch(link, { signal: dlCtrl.signal });
+      } finally {
+        clearTimeout(dlTimer);
+      }
       // fetch() only throws on network failure, not on HTTP errors — without
       // this check a 404/expired link body would be queued as "code".
       if (!res.ok) throw new Error(`file download failed: ${res.status}`);
