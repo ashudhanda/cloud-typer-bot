@@ -17,7 +17,14 @@ const PORT = Number.parseInt(process.env.PORT, 10) || 3000; // render injects PO
 app.get('/', (_req, res) => res.send('cloud-typer-bot alive'));
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
-app.listen(PORT, () => console.log(`health server on :${PORT}`));
+const server = app.listen(PORT, () => console.log(`health server on :${PORT}`));
+// Without this, a port clash (or a bad PORT value) throws uncaught and kills
+// the process with a bare stack trace — log it plainly and exit non-zero so
+// Render restarts the service instead of leaving it wedged.
+server.on('error', (err) => {
+  console.error(`health server failed to bind :${PORT} — ${err.message}`);
+  process.exit(1);
+});
 
 // starts last, after the health server binds its port — render marks the
 // service live only once something is listening, so telegram polling must
