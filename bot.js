@@ -20,7 +20,24 @@ let queue = []; // [{ content, fileName }] — send as many files as you like, t
 // Mid-wizard state for the /start flow. The steps run: duration → mode →
 // speed → project → confirm (with customDur/customProj detours in between),
 // and every chatId in here is waiting on an inline button or a free-text reply.
-const pending = new Map(); // chatId -> { step, durationMin, mode, speed, project }
+// Entries expire after 30 min: a wizard resumed hours later would confirm a
+// run against a queue that has long since changed, so getPending() treats a
+// stale entry as gone (the proj:/go: stale-button guards then expire it).
+const WIZARD_TTL_MS = 30 * 60 * 1000;
+const pending = new Map(); // chatId -> { step, at, durationMin, mode, speed, project }
+function getPending(chatId) {
+  const p = pending.get(chatId);
+  if (!p) return undefined;
+  if (Date.now() - (p.at || 0) > WIZARD_TTL_MS) {
+    pending.delete(chatId);
+    return undefined;
+  }
+  return p;
+}
+function setPending(chatId, p) {
+  p.at = Date.now();
+  pending.set(chatId, p);
+}
 
 // The bot is deliberately wide open until OWNER_ID is set — otherwise /id
 // (the way you learn your chat id) would have no way to run on first boot.
@@ -282,25 +299,25 @@ function startBot() {
     if (!isOwner(chatId)) return;
     // callbacks resume the /start wizard from the pending map — if the bot
     // restarted mid-wizard the map is empty and we start from a blank slate
-    const p = pending.get(chatId) || {};
+    const p = getPending(chatId) || {};
     const data = q.data || '';
 
     try {
       if (data.startsWith('dur:')) {
         if (data === 'dur:custom') {
           p.step = 'customDur';
-          pending.set(chatId, p);
+          setPending(chatId, p);
           await bot.sendMessage(chatId, 'type the total duration in minutes (e.g. 300 for 5h) — it gets split across the queued files by size:');
         } else {
           p.durationMin = parseInt(data.slice(4), 10);
           p.step = 'mode';
-          pending.set(chatId, p);
+          setPending(chatId, p);
           await bot.sendMessage(chatId, `duration: ${p.durationMin} min total\n\npick mode:`, modeKeyboard());
         }
       } else if (data.startsWith('mode:')) {
         p.mode = data.slice(5);
         p.step = 'speed';
-        pending.set(chatId, p);
+        setPending(chatId, p);
         await bot.sendMessage(chatId, 'typing speed:', {
           reply_markup: {
             inline_keyboard: [
@@ -315,7 +332,7 @@ function startBot() {
       } else if (data.startsWith('spd:')) {
         p.speed = data.slice(4);
         p.step = 'project';
-        pending.set(chatId, p);
+        setPending(chatId, p);
         await bot.sendMessage(chatId, 'project name (shows on the dashboard):', {
           reply_markup: {
             inline_keyboard: [
@@ -337,7 +354,7 @@ function startBot() {
           await bot.sendMessage(chatId, 'that button is from an old wizard (the bot restarted since) — /start to begin again.');
         } else if (data === 'proj:custom') {
           p.step = 'customProj';
-          pending.set(chatId, p);
+          setPending(chatId, p);
           await bot.sendMessage(chatId, 'type the project name:');
         } else {
           p.project = data.slice(5);
@@ -371,7 +388,7 @@ function startBot() {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!msg.text || msg.text.startsWith('/')) return;
-    const p = pending.get(chatId);
+    const p = getPending(chatId);
 
     if (p && p.step === 'customDur') {
       const mins = parseInt(msg.text.trim(), 10);
@@ -381,7 +398,7 @@ function startBot() {
       }
       p.durationMin = mins;
       p.step = 'mode';
-      pending.set(chatId, p);
+      setPending(chatId, p);
       await bot.sendMessage(chatId, `duration: ${mins} min total\n\npick mode:`, modeKeyboard());
       return;
     }
@@ -414,7 +431,7 @@ function startBot() {
   // a beat or two of the real count, leaning slightly high rather than low.
   async function showConfirm(chatId, p) {
     p.step = 'confirm';
-    pending.set(chatId, p);
+    setPending(chatId, p);
     const hrs = (p.durationMin / 60).toFixed(1);
     const beats = Math.round((p.durationMin * 60) / 117);
     await bot.sendMessage(
@@ -488,7 +505,7 @@ function startBot() {
   // the first step of the /start wizard: preset durations (2h-10h) as inline
   // buttons, or a free-text prompt for a custom minute count (dur:custom).
   function askDuration(chatId) {
-    pending.set(chatId, { step: 'duration' });
+    setPending(chatId, { step: 'duration' });
     bot.sendMessage(chatId, `loaded: ${queueSummary()}\n\npick total duration:`, {
       reply_markup: {
         inline_keyboard: [
