@@ -75,11 +75,13 @@ function startBot() {
 
   // /id: replies with the sender's chat id — the number that goes into
   // OWNER_ID to lock the bot down. Works even while the bot is unlocked.
-  bot.onText(/\/id/, (msg) => {
+  // Anchored (^... \b): unanchored patterns also fired on ordinary text
+  // that merely mentioned a command, e.g. "check /start for me".
+  bot.onText(/^\/id\b/, (msg) => {
     bot.sendMessage(msg.chat.id, `your chat id: ${msg.chat.id}`);
   });
 
-  bot.onText(/\/help/, (msg) => {
+  bot.onText(/^\/help\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     bot.sendMessage(
@@ -98,7 +100,7 @@ function startBot() {
     );
   });
 
-  bot.onText(/\/start/, (msg) => {
+  bot.onText(/^\/start\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!OWNER_ID) {
@@ -115,7 +117,7 @@ function startBot() {
     askDuration(chatId);
   });
 
-  bot.onText(/\/queue/, (msg) => {
+  bot.onText(/^\/queue\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!queue.length) {
@@ -125,14 +127,14 @@ function startBot() {
     bot.sendMessage(chatId, `loaded: ${queueSummary()}\n\n/start to run, /clearqueue to reset.`);
   });
 
-  bot.onText(/\/clearqueue/, (msg) => {
+  bot.onText(/^\/clearqueue\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     queue = [];
     bot.sendMessage(chatId, 'queue cleared. send fresh files when ready.');
   });
 
-  bot.onText(/\/name (.+)/, (msg, match) => {
+  bot.onText(/^\/name\s+(.+)/, (msg, match) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!queue.length) {
@@ -152,7 +154,7 @@ function startBot() {
     bot.sendMessage(chatId, `renamed to ${name}\n\nloaded: ${queueSummary()}`);
   });
 
-  bot.onText(/\/status/, (msg) => {
+  bot.onText(/^\/status\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!currentRun) {
@@ -171,7 +173,7 @@ function startBot() {
     );
   });
 
-  bot.onText(/\/stop/, async (msg) => {
+  bot.onText(/^\/stop\b/, async (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!currentRun || currentRun.done) {
@@ -196,7 +198,7 @@ function startBot() {
     );
   });
 
-  bot.onText(/\/getfile/, async (msg) => {
+  bot.onText(/^\/getfile\b/, async (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     let sent = 0;
