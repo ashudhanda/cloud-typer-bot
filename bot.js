@@ -233,16 +233,23 @@ function startBot() {
       // fall back to the newest files in the out dir. Dirent.isFile() skips
       // the first statSync, and one shared stat per file feeds both the size
       // filter and the mtime sort — the old chain stat'ed every file 3+ times.
-      const files = fs
-        .readdirSync(OUT_DIR, { withFileTypes: true })
-        .filter((d) => d.isFile())
-        .map((d) => {
-          const p = path.join(OUT_DIR, d.name);
-          return { p, st: fs.statSync(p) };
-        })
-        .filter((e) => e.st.size > 0)
-        .sort((a, b) => b.st.mtimeMs - a.st.mtimeMs)
-        .map((e) => e.p);
+      // Wrapped: out/ is created at boot but can be deleted at runtime, and
+      // an uncaught readdirSync throw here would kill the handler.
+      let files = [];
+      try {
+        files = fs
+          .readdirSync(OUT_DIR, { withFileTypes: true })
+          .filter((d) => d.isFile())
+          .map((d) => {
+            const p = path.join(OUT_DIR, d.name);
+            return { p, st: fs.statSync(p) };
+          })
+          .filter((e) => e.st.size > 0)
+          .sort((a, b) => b.st.mtimeMs - a.st.mtimeMs)
+          .map((e) => e.p);
+      } catch {
+        files = [];
+      }
       // cap at the 5 newest files — a big out/ dir should never spam the chat.
       // captions name each fallback file: without them a chat full of
       // timestamped out/ filenames is hard to tell apart.
