@@ -272,6 +272,12 @@ function startBot() {
 
   // inline button flow
   bot.on('callback_query', async (q) => {
+    // Inline-message callbacks carry no q.message — without this guard the
+    // chatId read below throws outside the try and the handler dies.
+    if (!q.message) {
+      bot.answerCallbackQuery(q.id).catch(() => {});
+      return;
+    }
     const chatId = q.message.chat.id;
     if (!isOwner(chatId)) return;
     // callbacks resume the /start wizard from the pending map — if the bot
