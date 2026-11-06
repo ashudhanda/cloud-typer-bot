@@ -211,7 +211,9 @@ function startBot() {
     } catch {} // best-effort: a failed file send must not break the stop flow
     await bot.sendMessage(
       chatId,
-      `🛑 stopped at ${s.percent}% overall (file ${s.filesDone + 1}/${s.filesTotal}). completed files were already delivered. heartbeats sent so far (${s.heartbeatsSent}) stay on the dashboard.`
+      // clamp: filesDone + 1 can overshoot filesTotal when the last file
+      // finished just before the stop landed (same clamp as /status).
+      `🛑 stopped at ${s.percent}% overall (file ${Math.min(s.filesDone + 1, s.filesTotal)}/${s.filesTotal}). completed files were already delivered. heartbeats sent so far (${s.heartbeatsSent}) stay on the dashboard.`
     );
   });
 
