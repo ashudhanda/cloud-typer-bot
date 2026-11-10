@@ -6,7 +6,8 @@
   "main": "server.js",
   "license": "UNLICENSED",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --check server.js && node --check bot.js && node --check typer.js && node --check waka.js"
   },
   "engines": {
     "node": ">=18"
