@@ -26,6 +26,19 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
+// Render stops the service with SIGTERM (SIGKILL follows ~30s later): close
+// the health server and exit promptly instead of dying mid-request, so a
+// redeploy never leaves a health check hanging. The 5s cap bounds the wait —
+// telegram polling holds the loop open, so an unref'd timer forces the exit
+// once the grace period is up.
+function shutdown(signal) {
+  console.log(`received ${signal} — shutting down`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 // starts last, after the health server binds its port — render marks the
 // service live only once something is listening, so telegram polling must
 // never block or precede the bind above.
