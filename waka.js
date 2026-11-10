@@ -16,6 +16,16 @@ const USER_AGENT = 'wakatime/v1.102.5 (windows-10.0.22631-x86_64) go1.22.5 vscod
 // update it, match an actual vscode-wakatime release (agent + plugin versions)
 // so the beats stay indistinguishable from a genuine plugin install.
 
+// Warn once, not per heartbeat: with no api key every beat fails, and
+// logging each one would spam the render logs every ~2 min for the whole run.
+let warnedMissingKey = false;
+function warnMissingKey() {
+  if (!warnedMissingKey) {
+    warnedMissingKey = true;
+    console.error('WAKA_API_KEY is not set — heartbeats will not be sent');
+  }
+}
+
 // wakatime auth is just the api key base64'd as a Basic credential —
 // the username part is unused, so the key itself goes through the encoder.
 /**
@@ -38,13 +48,18 @@ function headers() {
  * The api key goes out twice on purpose: the Basic auth header above (the
  * wakatime-cli convention) and the api_key query param below — both servers
  * accept the param, so it works as a compat fallback if one path is rejected.
- * Returns { ok: false } immediately when WAKA_API_KEY is unset.
+ * Returns { ok: false } immediately when WAKA_API_KEY is unset (and logs a
+ * one-time warning the first time that happens, so the reason for a growing
+ * "failed" count in /status is visible in the logs instead of silent).
  *
  * @param {object} hb heartbeat payload from makeHeartbeat()
  * @returns {Promise<{ok: boolean, status?: number, error?: string}>}
  */
 async function sendHeartbeat(hb) {
-  if (!API_KEY) return { ok: false, error: 'missing WAKA_API_KEY' };
+  if (!API_KEY) {
+    warnMissingKey();
+    return { ok: false, error: 'missing WAKA_API_KEY' };
+  }
   try {
     const res = await fetch(`${API_URL}/users/${USER_SEGMENT}/heartbeats?api_key=${API_KEY}`, {
       method: 'POST',
@@ -65,13 +80,17 @@ async function sendHeartbeat(hb) {
  * failed tallies from the returned object. When WAKA_API_KEY is unset every
  * beat is counted failed up front, like sendHeartbeat's early return: the
  * tally is identical to firing the posts, but a long instant run no longer
- * spams the api with dozens of doomed requests first.
+ * spams the api with dozens of doomed requests first. The missing-key case
+ * logs the same one-time warning as sendHeartbeat.
  *
  * @param {Array} hbs heartbeat payloads, in chronological order
  * @returns {Promise<{sent: number, failed: number}>}
  */
 async function sendBulk(hbs) {
-  if (!API_KEY) return { sent: 0, failed: hbs.length };
+  if (!API_KEY) {
+    warnMissingKey();
+    return { sent: 0, failed: hbs.length };
+  }
   const results = { sent: 0, failed: 0 };
   for (let i = 0; i < hbs.length; i += 25) {
     const chunk = hbs.slice(i, i + 25);
