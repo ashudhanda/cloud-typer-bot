@@ -110,4 +110,6 @@ file naming matters: the dashboard language comes from the extension, so `style.
 - render sleeping → uptimerobot monitor on `/health`
 - redeploy wipes in-memory state → the queue, the `/start` wizard step and any live run all live in memory. after a redeploy, re-send your files and `/start` again
 - stale inline buttons → buttons from a pre-redeploy wizard (duration, mode, project, ▶ start) are expired on purpose: tapping one tells you to `/start` again instead of launching a run with missing options
+- run failed to start → the files stay queued — just `/start` again (a failed launch no longer wedges the bot on "a run is already active")
+- empty or binary file uploads are rejected — send a plain text/code file (1MB max)
 - local test: `npm install`, copy `.env.example` to `.env`, fill it, `npm start`
