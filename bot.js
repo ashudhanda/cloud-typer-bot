@@ -291,6 +291,18 @@ function startBot() {
       // this check a 404/expired link body would be queued as "code".
       if (!res.ok) throw new Error(`file download failed: ${res.status}`);
       const text = await res.text();
+      // an empty file types nothing but still burns a run slot and a
+      // "file done" delivery — reject it here instead of queueing it.
+      if (!text.length) {
+        await bot.sendMessage(chatId, 'that file is empty — send a file with some code in it.');
+        return;
+      }
+      // NUL bytes mean binary, not code — a photo or zip queued as "code"
+      // would type unreadable bytes and burn the run's duration on garbage.
+      if (text.includes('\0')) {
+        await bot.sendMessage(chatId, 'that looks like a binary file, not code — send a plain text/code file.');
+        return;
+      }
       // sanitize the telegram-provided filename — it could contain slashes or
       // "..", which would walk out of out/ when typer.js builds the outPath.
       // basename keeps normal names ("style.css") exactly as-is.
@@ -328,10 +340,18 @@ function startBot() {
           setPending(chatId, p);
           await bot.sendMessage(chatId, 'type the total duration in minutes (e.g. 300 for 5h) — it gets split across the queued files by size:');
         } else {
-          p.durationMin = parseInt(data.slice(4), 10);
-          p.step = 'mode';
-          setPending(chatId, p);
-          await bot.sendMessage(chatId, `duration: ${p.durationMin} min total\n\npick mode:`, modeKeyboard());
+          const mins = parseInt(data.slice(4), 10);
+          // callback_data is owner-only, but a stale or hand-crafted button
+          // can still carry a non-number — NaN here would only surface
+          // later as a failed launch, so reject it at the source instead.
+          if (!Number.isFinite(mins) || mins <= 0) {
+            await bot.sendMessage(chatId, 'that duration button looks stale — /start to pick a duration again.');
+          } else {
+            p.durationMin = mins;
+            p.step = 'mode';
+            setPending(chatId, p);
+            await bot.sendMessage(chatId, `duration: ${p.durationMin} min total\n\npick mode:`, modeKeyboard());
+          }
         }
       } else if (data.startsWith('mode:')) {
         p.mode = data.slice(5);
@@ -502,10 +522,13 @@ function startBot() {
       },
       onFinish: async (run) => {
         const s = run.status();
-        await bot.sendMessage(
-          chatId,
-          `✅ run complete — ${s.filesTotal} file${s.filesTotal > 1 ? 's' : ''} typed\n• heartbeats sent: ${s.heartbeatsSent}${s.heartbeatsFailed ? ` (failed: ${s.heartbeatsFailed})` : ''}\n• project: ${s.project}\n• mode: ${s.mode}\n\nsend more files and /start for the next run.`
-        );
+        try {
+          await bot.sendMessage(
+            chatId,
+            `✅ run complete — ${s.filesTotal} file${s.filesTotal > 1 ? 's' : ''} typed\n• heartbeats sent: ${s.heartbeatsSent}${s.heartbeatsFailed ? ` (failed: ${s.heartbeatsFailed})` : ''}\n• project: ${s.project}\n• mode: ${s.mode}\n\nsend more files and /start for the next run.`
+          );
+        } catch {} // best-effort: finish() calls this fire-and-forget, so a
+        // failed summary send must not surface as an unhandled rejection
       },
     });
     try {
@@ -517,6 +540,12 @@ function startBot() {
           : `⏱ realtime run started — typing ${filesForRun.length} file${filesForRun.length > 1 ? 's' : ''} over ~${(p.durationMin / 60).toFixed(1)}h. each file arrives here as it finishes. /status anytime, /stop to end early.`
       );
     } catch (e) {
+      // the failed run never started: drop it, or /start stays wedged on "a
+      // run is already active" until a /stop — and hand the files back to
+      // the queue, since the launch above already consumed them (anything
+      // uploaded while the launch was in flight stays queued behind them).
+      currentRun = null;
+      queue = filesForRun.concat(queue);
       await bot.sendMessage(chatId, `run failed to start: ${e.message || e}`);
     }
   }
