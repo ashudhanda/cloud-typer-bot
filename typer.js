@@ -287,7 +287,7 @@ class TyperRun {
    * in one promise (await it); realtime runs on timers and returns
    * undefined — track it via .done or the bot's /status.
    *
-   * @throws {Error} when no files are queued
+   * @throws {Error} when no files are queued, the duration is invalid, or the mode is unknown
    * @returns {Promise<void>|undefined} the instant-mode promise, or
    *          undefined for a realtime run
    */
@@ -300,6 +300,11 @@ class TyperRun {
       throw new Error('invalid durationMin');
     }
     if (this.mode === 'instant') return this.startInstant();
+    // An unknown mode used to fall through to realtime silently — a
+    // mistyped or stale wizard button would then run for hours under the
+    // wrong mode. Fail loudly instead (launchRun reports it and restores
+    // the queue).
+    if (this.mode !== 'realtime') throw new Error('invalid mode');
     this.startRealtime();
     return undefined;
   }
