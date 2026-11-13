@@ -90,19 +90,27 @@ function startBot() {
   bot = new TelegramBot(TOKEN, { polling: true });
   bot.on('polling_error', (e) => console.error('polling error:', e.message));
 
+  // Fire-and-forget send for the sync command handlers below (/id, /help,
+  // /start, /queue, /clearqueue, /name, /status): those handlers can't await,
+  // so a bare sendMessage rejection used to surface as an unhandled rejection
+  // and crash the whole process on a Telegram API hiccup — log it instead.
+  // The async handlers keep awaiting sendMessage directly (their try/catch
+  // already covers failures).
+  const safeSend = (chatId, text, opts) =>
+    bot.sendMessage(chatId, text, opts).catch((e) => console.error('send failed:', e.message));
+
   // /id: replies with the sender's chat id — the number that goes into
   // OWNER_ID to lock the bot down. Works even while the bot is unlocked.
   // Anchored (^... \b): unanchored patterns also fired on ordinary text
   // that merely mentioned a command, e.g. "check /start for me".
   bot.onText(/^\/id\b/, (msg) => {
-    bot.sendMessage(msg.chat.id, `your chat id: ${msg.chat.id}`);
+    safeSend(msg.chat.id, `your chat id: ${msg.chat.id}`);
   });
 
   bot.onText(/^\/help\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
-    bot.sendMessage(
-      chatId,
+    safeSend(chatId,
       'commands:\n' +
         '/start — configure + launch a run\n' +
         '/status — live progress\n' +
@@ -121,14 +129,14 @@ function startBot() {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!OWNER_ID) {
-      bot.sendMessage(chatId, '⚠ bot is unlocked — anyone who finds it can use it. send /id, put that number in the OWNER_ID env var, redeploy.');
+      safeSend(chatId, '⚠ bot is unlocked — anyone who finds it can use it. send /id, put that number in the OWNER_ID env var, redeploy.');
     }
     if (currentRun && !currentRun.done) {
-      bot.sendMessage(chatId, 'a run is already active. /status to check, /stop to end it.');
+      safeSend(chatId, 'a run is already active. /status to check, /stop to end it.');
       return;
     }
     if (!queue.length) {
-      bot.sendMessage(chatId, 'send me the code first — upload files (html/css/js anything) or paste code (min 200 chars). send as many as you like, they stack up.');
+      safeSend(chatId, 'send me the code first — upload files (html/css/js anything) or paste code (min 200 chars). send as many as you like, they stack up.');
       return;
     }
     askDuration(chatId);
@@ -138,24 +146,24 @@ function startBot() {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!queue.length) {
-      bot.sendMessage(chatId, 'queue is empty — send files or paste code.');
+      safeSend(chatId, 'queue is empty — send files or paste code.');
       return;
     }
-    bot.sendMessage(chatId, `loaded: ${queueSummary()}\n\n/start to run, /clearqueue to reset.`);
+    safeSend(chatId, `loaded: ${queueSummary()}\n\n/start to run, /clearqueue to reset.`);
   });
 
   bot.onText(/^\/clearqueue\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     queue = [];
-    bot.sendMessage(chatId, 'queue cleared. send fresh files when ready.');
+    safeSend(chatId, 'queue cleared. send fresh files when ready.');
   });
 
   bot.onText(/^\/name\s+(.+)/, (msg, match) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!queue.length) {
-      bot.sendMessage(chatId, 'no file loaded yet — upload or paste code first.');
+      safeSend(chatId, 'no file loaded yet — upload or paste code first.');
       return;
     }
     const name = (match[1] || '').trim();
@@ -164,24 +172,23 @@ function startBot() {
     // "." and ".." pass the character class above but are directory
     // references, not filenames — reject them explicitly.
     if (!/^[\w.\- ]{1,80}$/.test(name) || name === '.' || name === '..') {
-      bot.sendMessage(chatId, 'weird name — keep it simple, like style.css');
+      safeSend(chatId, 'weird name — keep it simple, like style.css');
       return;
     }
     queue[queue.length - 1].fileName = name; // renames the last added file
-    bot.sendMessage(chatId, `renamed to ${name}\n\nloaded: ${queueSummary()}`);
+    safeSend(chatId, `renamed to ${name}\n\nloaded: ${queueSummary()}`);
   });
 
   bot.onText(/^\/status\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!currentRun) {
-      bot.sendMessage(chatId, 'no run yet. send files, then /start.');
+      safeSend(chatId, 'no run yet. send files, then /start.');
       return;
     }
     const s = currentRun.status();
     const label = s.done ? (s.stopped ? '🛑 stopped' : '✅ finished') : '⏳ running';
-    bot.sendMessage(
-      chatId,
+    safeSend(chatId,
       `${label} — file ${Math.min(s.filesDone + (s.done ? 0 : 1), s.filesTotal)}/${s.filesTotal}: ${s.currentFile}\n` +
         `• overall: ${s.percent}% (${s.charsDone}/${s.charsTotal} chars)\n` +
         `• elapsed: ${s.elapsedMin} min${s.done ? '' : `  • eta: ~${s.etaMin} min`}\n` +
@@ -572,7 +579,7 @@ function startBot() {
   // buttons, or a free-text prompt for a custom minute count (dur:custom).
   function askDuration(chatId) {
     setPending(chatId, { step: 'duration' });
-    bot.sendMessage(chatId, `loaded: ${queueSummary()}\n\npick total duration:`, {
+    safeSend(chatId, `loaded: ${queueSummary()}\n\npick total duration:`, {
       reply_markup: {
         inline_keyboard: [
           [
