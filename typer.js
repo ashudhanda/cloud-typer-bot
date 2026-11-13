@@ -54,7 +54,11 @@ class TyperRun {
         totalLines: lineStarts.length,
         outPath: path.join(
           OUT_DIR,
-          `${Date.now()}-${Math.floor(rand(100, 999))}-${f.fileName || 'code.txt'}`
+          // basename: the bot sanitizes names, but TyperRun is also usable
+          // directly — a fileName like '../../../evil.js' would otherwise
+          // walk out of out/ (the timestamp prefix only absorbs the first
+          // '..'), so strip any directory part here as defense in depth.
+          `${Date.now()}-${Math.floor(rand(100, 999))}-${path.basename(f.fileName || 'code.txt')}`
         ),
       };
     });
