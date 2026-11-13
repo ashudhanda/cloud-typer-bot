@@ -354,35 +354,49 @@ function startBot() {
           }
         }
       } else if (data.startsWith('mode:')) {
-        p.mode = data.slice(5);
-        p.step = 'speed';
-        setPending(chatId, p);
-        await bot.sendMessage(chatId, 'typing speed:', {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: '🐢 slow', callback_data: 'spd:slow' },
-                { text: '🚶 normal', callback_data: 'spd:normal' },
-                { text: '🏃 fast', callback_data: 'spd:fast' },
+        // callback_data is owner-only, but a stale or hand-crafted button can
+        // still carry an unknown mode — TyperRun.start() would only reject it
+        // at launch, after the confirm screen, so reject it at the source
+        // like the dur: branch does (same for spd: below).
+        const mode = data.slice(5);
+        if (mode !== 'realtime' && mode !== 'instant') {
+          await bot.sendMessage(chatId, 'that mode button looks stale — /start to pick a mode again.');
+        } else {
+          p.mode = mode;
+          p.step = 'speed';
+          setPending(chatId, p);
+          await bot.sendMessage(chatId, 'typing speed:', {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: '🐢 slow', callback_data: 'spd:slow' },
+                  { text: '🚶 normal', callback_data: 'spd:normal' },
+                  { text: '🏃 fast', callback_data: 'spd:fast' },
+                ],
               ],
-            ],
-          },
-        });
+            },
+          });
+        }
       } else if (data.startsWith('spd:')) {
-        p.speed = data.slice(4);
-        p.step = 'project';
-        setPending(chatId, p);
-        await bot.sendMessage(chatId, 'project name (shows on the dashboard):', {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: 'webos', callback_data: 'proj:webos' },
-                { text: 'eswebsite', callback_data: 'proj:eswebsite' },
+        const speed = data.slice(4);
+        if (speed !== 'slow' && speed !== 'normal' && speed !== 'fast') {
+          await bot.sendMessage(chatId, 'that speed button looks stale — /start to pick a speed again.');
+        } else {
+          p.speed = speed;
+          p.step = 'project';
+          setPending(chatId, p);
+          await bot.sendMessage(chatId, 'project name (shows on the dashboard):', {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: 'webos', callback_data: 'proj:webos' },
+                  { text: 'eswebsite', callback_data: 'proj:eswebsite' },
+                ],
+                [{ text: 'custom', callback_data: 'proj:custom' }],
               ],
-              [{ text: 'custom', callback_data: 'proj:custom' }],
-            ],
-          },
-        });
+            },
+          });
+        }
       } else if (data.startsWith('proj:')) {
         // Stale-button guard: after a restart the pending map is empty, so
         // an old project button arrives with no duration/mode/speed. Letting
