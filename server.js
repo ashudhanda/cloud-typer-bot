@@ -11,7 +11,11 @@ const express = require('express');
 const app = express();
 // Parsed as a number: passing a non-numeric PORT string straight to
 // listen() would make express treat it as a unix-socket path, not a port.
-const PORT = Number.parseInt(process.env.PORT, 10) || 3000; // render injects PORT; 3000 is for local runs
+// An out-of-range port (negative, or above 65535) is worse — listen()
+// throws and kills the process with a bare stack trace — so anything
+// outside 1-65535 falls back to 3000, like a missing PORT.
+const PORT_RAW = Number.parseInt(process.env.PORT, 10);
+const PORT = Number.isInteger(PORT_RAW) && PORT_RAW >= 1 && PORT_RAW <= 65535 ? PORT_RAW : 3000; // render injects PORT; 3000 is for local runs
 
 // '/' only proves the service is up — uptimerobot and render's health checks live on /health.
 app.get('/', (_req, res) => res.send('cloud-typer-bot alive'));
