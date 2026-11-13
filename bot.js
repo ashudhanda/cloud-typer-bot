@@ -410,7 +410,11 @@ function startBot() {
           setPending(chatId, p);
           await bot.sendMessage(chatId, 'type the project name:');
         } else {
-          p.project = data.slice(5);
+          // sanitize a hand-crafted project button exactly like a typed
+          // custom name — the two real buttons are already clean, so this
+          // only bites on crafted callbacks, which would otherwise smuggle
+          // arbitrary text into the dashboard project name.
+          p.project = data.slice(5).toLowerCase().replace(/[^a-z0-9\-_ ]/g, '') || 'myproject';
           await showConfirm(chatId, p);
         }
       } else if (data === 'go:start') {
