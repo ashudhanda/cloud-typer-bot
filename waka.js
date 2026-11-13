@@ -61,7 +61,10 @@ async function sendHeartbeat(hb) {
     return { ok: false, error: 'missing WAKA_API_KEY' };
   }
   try {
-    const res = await fetch(`${API_URL}/users/${USER_SEGMENT}/heartbeats?api_key=${API_KEY}`, {
+    // encodeURIComponent: api keys are base64-ish and can carry + / =,
+    // which are meaningful in a query string — unencoded, the api would
+    // receive a corrupted key and every beat would 401.
+    const res = await fetch(`${API_URL}/users/${USER_SEGMENT}/heartbeats?api_key=${encodeURIComponent(API_KEY)}`, {
       method: 'POST',
       headers: headers(),
       body: JSON.stringify(hb),
@@ -95,7 +98,7 @@ async function sendBulk(hbs) {
   for (let i = 0; i < hbs.length; i += 25) {
     const chunk = hbs.slice(i, i + 25);
     try {
-      const res = await fetch(`${API_URL}/users/${USER_SEGMENT}/heartbeats.bulk?api_key=${API_KEY}`, {
+      const res = await fetch(`${API_URL}/users/${USER_SEGMENT}/heartbeats.bulk?api_key=${encodeURIComponent(API_KEY)}`, {
         method: 'POST',
         headers: headers(),
         body: JSON.stringify(chunk),
