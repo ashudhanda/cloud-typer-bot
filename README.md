@@ -52,6 +52,8 @@ the wizard walks you through five steps:
 
 the total duration is split across your files by size — a bigger file gets a bigger share of the time.
 
+each wizard step waits up to 30 minutes — after that the wizard expires and its buttons stop working, so `/start` again from the top.
+
 finished files arrive on telegram automatically as each completes. launching a run consumes the queue — anything you upload mid-run stacks up for the next one. every run also saves its files to `out/` with a timestamped filename, so reruns never overwrite earlier ones.
 
 ### command reference
@@ -112,4 +114,5 @@ file naming matters: the dashboard language comes from the extension, so `style.
 - stale inline buttons → buttons from a pre-redeploy wizard (duration, mode, project, ▶ start) are expired on purpose: tapping one tells you to `/start` again instead of launching a run with missing options
 - run failed to start → the files stay queued — just `/start` again (a failed launch no longer wedges the bot on "a run is already active")
 - empty or binary file uploads are rejected — send a plain text/code file (1MB max)
+- file upload fails with 'could not read that file' → the telegram download timed out after 30s (slow link, or a file near the 1MB cap) — send it again, or paste the code instead
 - local test: `npm install`, copy `.env.example` to `.env`, fill it, `npm start`
