@@ -37,6 +37,14 @@ function getPending(chatId) {
 function setPending(chatId, p) {
   p.at = Date.now();
   pending.set(chatId, p);
+  // prune stale entries: getPending() only expires the entry being read, so
+  // a wizard abandoned mid-flow would otherwise sit in the map forever —
+  // one small object per abandoned wizard, accumulating over months of
+  // uptime. The sweep rides on the write that already happened, so it costs
+  // one map scan per wizard step and needs no timer.
+  for (const [id, entry] of pending) {
+    if (Date.now() - (entry.at || 0) > WIZARD_TTL_MS) pending.delete(id);
+  }
 }
 
 // The bot is deliberately wide open until OWNER_ID is set — otherwise /id
