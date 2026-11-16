@@ -310,6 +310,13 @@ function startBot() {
       // this check a 404/expired link body would be queued as "code".
       if (!res.ok) throw new Error(`file download failed: ${res.status}`);
       const text = await res.text();
+      // the file_size check above trusts Telegram's declared size — enforce
+      // the same 1MB cap on the bytes actually received, so a file whose
+      // declared size is missing or wrong can't queue megabytes of text.
+      if (text.length > MAX_UPLOAD_BYTES) {
+        await bot.sendMessage(chatId, 'file too big (1MB max) — code files should be tiny.');
+        return;
+      }
       // an empty file types nothing but still burns a run slot and a
       // "file done" delivery — reject it here instead of queueing it.
       if (!text.length) {
