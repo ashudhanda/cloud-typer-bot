@@ -94,8 +94,12 @@ function startBot() {
   // /start, /queue, /clearqueue, /name, /status): those handlers can't await,
   // so a bare sendMessage rejection used to surface as an unhandled rejection
   // and crash the whole process on a Telegram API hiccup — log it instead.
-  // The async handlers keep awaiting sendMessage directly (their try/catch
-  // already covers failures).
+  // It is also used for the last message of the async handlers (/stop,
+  // /getfile, the document-upload failure notice, the free-text replies and
+  // showConfirm): those sends sit outside any try/catch, so awaiting them
+  // directly has the same crash risk — the callback handler and launchRun
+  // keep awaiting sendMessage directly because their try/catch already
+  // covers failures.
   const safeSend = (chatId, text, opts) =>
     bot.sendMessage(chatId, text, opts).catch((e) => console.error('send failed:', e.message));
 
@@ -201,7 +205,7 @@ function startBot() {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     if (!currentRun || currentRun.done) {
-      bot.sendMessage(chatId, 'nothing running right now.');
+      safeSend(chatId, 'nothing running right now.');
       return;
     }
     currentRun.stop();
@@ -216,7 +220,7 @@ function startBot() {
         await bot.sendDocument(chatId, f.outPath, { caption: 'partial (stopped mid-file)' }, { filename: f.fileName });
       }
     } catch {} // best-effort: a failed file send must not break the stop flow
-    await bot.sendMessage(
+    safeSend(
       chatId,
       // clamp: filesDone + 1 can overshoot filesTotal when the last file
       // finished just before the stop landed (same clamp as /status).
@@ -270,7 +274,7 @@ function startBot() {
         } catch {} // best-effort, same as above
       }
     }
-    if (!sent) await bot.sendMessage(chatId, 'no file yet — load files and /start a run first.');
+    if (!sent) safeSend(chatId, 'no file yet — load files and /start a run first.');
   });
 
   // incoming source as a file upload — stacks into the queue
@@ -321,7 +325,9 @@ function startBot() {
         `added ${msg.document.file_name || 'file'} (${text.length} chars)\nloaded: ${queueSummary()}${busy ? '\n\n(a run is active — these will be used for the next one)' : '\n\n/start when ready, /clearqueue to reset.'}`
       );
     } catch {
-      await bot.sendMessage(chatId, 'could not read that file — send a plain text/code file.');
+      // safeSend: this notice sits outside any try — a failed send here
+      // would otherwise surface as an unhandled rejection and crash the bot.
+      safeSend(chatId, 'could not read that file — send a plain text/code file.');
     }
   });
 
@@ -457,13 +463,13 @@ function startBot() {
     if (p && p.step === 'customDur') {
       const mins = parseInt(msg.text.trim(), 10);
       if (!Number.isFinite(mins) || mins < 15 || mins > 840) {
-        await bot.sendMessage(chatId, 'give a number between 15 and 840 (14h max — keep it human).');
+        safeSend(chatId, 'give a number between 15 and 840 (14h max — keep it human).');
         return;
       }
       p.durationMin = mins;
       p.step = 'mode';
       setPending(chatId, p);
-      await bot.sendMessage(chatId, `duration: ${mins} min total\n\npick mode:`, modeKeyboard());
+      safeSend(chatId, `duration: ${mins} min total\n\npick mode:`, modeKeyboard());
       return;
     }
 
@@ -483,7 +489,7 @@ function startBot() {
       // is probably a chat reply, not a file worth queueing for typing.
       queue.push({ content: msg.text, fileName: 'pasted-code.txt' });
       const busy = currentRun && !currentRun.done;
-      await bot.sendMessage(
+      safeSend(
         chatId,
         `got it — ${msg.text.length} chars added as pasted-code.txt (use /name style.css to rename — the extension sets the language on the dashboard).\nloaded: ${queueSummary()}${busy ? '\n\n(a run is active — these will be used for the next one)' : '\n\n/start when ready.'}`
       );
@@ -498,7 +504,11 @@ function startBot() {
     setPending(chatId, p);
     const hrs = (p.durationMin / 60).toFixed(1);
     const beats = Math.round((p.durationMin * 60) / 117);
-    await bot.sendMessage(
+    // safeSend, not await: showConfirm is also reached from the free-text
+    // message handler, which has no try/catch — awaiting this send there
+    // would crash the process on a Telegram hiccup (same for the callback
+    // path, where the send is the last action of its branch anyway).
+    safeSend(
       chatId,
       `ready:\n• files: ${queueSummary()}\n• duration: ${hrs}h total (split by file size)\n• mode: ${p.mode}\n• speed: ${p.speed}\n• project: ${p.project}\n• ~${beats} heartbeats will be sent\n\nstart?`,
       {
