@@ -6,7 +6,9 @@ const API_URL = (process.env.WAKA_API_URL || 'https://hackatime.hackclub.com/api
 const API_KEY = process.env.WAKA_API_KEY || '';
 // user segment in the heartbeat url — 'current' works on wakatime; hackatime
 // may 404 on it, in which case set WAKA_USER to your hackatime username/id.
-const USER_SEGMENT = process.env.WAKA_USER || 'current';
+// Encoded at the source: a username/id with a space or slash would otherwise
+// break the url join below (fetch throws, every beat fails).
+const USER_SEGMENT = encodeURIComponent(process.env.WAKA_USER || 'current');
 
 // Heartbeat POSTs get a 15s timeout: a stalled api connection used to hang
 // the fetch promise forever, and the realtime loop awaits each beat before
