@@ -8,6 +8,12 @@ const API_KEY = process.env.WAKA_API_KEY || '';
 // may 404 on it, in which case set WAKA_USER to your hackatime username/id.
 const USER_SEGMENT = process.env.WAKA_USER || 'current';
 
+// Heartbeat POSTs get a 15s timeout: a stalled api connection used to hang
+// the fetch promise forever, and the realtime loop awaits each beat before
+// scheduling the next — one hung connection froze heartbeats for the rest
+// of the run. AbortSignal.timeout needs Node 17.3+ (engines say >= 18).
+const HEARTBEAT_TIMEOUT_MS = 15000;
+
 // the real plugins just run wakatime-cli under the hood, and wakatime parses
 // editor + os from the User-Agent header. so we mirror the vscode plugin agent
 // on windows — blends in with the existing stats instead of showing "linux".
@@ -68,6 +74,7 @@ async function sendHeartbeat(hb) {
       method: 'POST',
       headers: headers(),
       body: JSON.stringify(hb),
+      signal: AbortSignal.timeout(HEARTBEAT_TIMEOUT_MS),
     });
     return { ok: res.ok, status: res.status };
   } catch (err) {
@@ -102,6 +109,7 @@ async function sendBulk(hbs) {
         method: 'POST',
         headers: headers(),
         body: JSON.stringify(chunk),
+        signal: AbortSignal.timeout(HEARTBEAT_TIMEOUT_MS),
       });
       if (res.ok) results.sent += chunk.length;
       else {
