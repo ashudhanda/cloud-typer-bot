@@ -109,6 +109,7 @@ file naming matters: the dashboard language comes from the extension, so `style.
 
 - bot silent → `OWNER_ID` wrong (check `/id`), or render logs show a polling error (bad token)
 - heartbeats failing → check `WAKA_API_KEY` / `WAKA_API_URL` in render env; `/status` shows the failed count. if you see 404s on hackatime, set `WAKA_USER` to your hackatime username/id
+- heartbeat posts time out after 15s — a stalled api fails fast and the loop keeps going instead of freezing the run; if `/status` shows the failed count climbing, the api or key is still the problem
 - render sleeping → uptimerobot monitor on `/health`
 - redeploy wipes in-memory state → the queue, the `/start` wizard step and any live run all live in memory. after a redeploy, re-send your files and `/start` again
 - stale inline buttons → buttons from a pre-redeploy wizard (duration, mode, project, ▶ start) are expired on purpose: tapping one tells you to `/start` again instead of launching a run with missing options
