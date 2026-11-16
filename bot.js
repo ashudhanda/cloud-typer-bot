@@ -340,7 +340,12 @@ function startBot() {
       return;
     }
     const chatId = q.message.chat.id;
-    if (!isOwner(chatId)) return;
+    if (!isOwner(chatId)) {
+      // answer so the button stops spinning — the early return skips the
+      // answerCallbackQuery at the end of the handler.
+      bot.answerCallbackQuery(q.id).catch(() => {});
+      return;
+    }
     // callbacks resume the /start wizard from the pending map — if the bot
     // restarted mid-wizard the map is empty and we start from a blank slate
     const p = getPending(chatId) || {};
