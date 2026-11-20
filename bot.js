@@ -182,8 +182,10 @@ function startBot() {
     // allowed: letters, digits, underscore, dot, dash, space (up to 80 chars) — anything
     // else (slashes, quotes, ..) is rejected so renamed files stay safe on disk
     // "." and ".." pass the character class above but are directory
-    // references, not filenames — reject them explicitly.
-    if (!/^[\w.\- ]{1,80}$/.test(name) || name === '.' || name === '..') {
+    // references, not filenames — reject them explicitly, and "..." and
+    // other all-dots names with them (same class, same problem: not a
+    // usable filename, and Telegram rejects it as an attachment name).
+    if (!/^[\w.\- ]{1,80}$/.test(name) || name === '.' || name === '..' || /^\.+$/.test(name)) {
       safeSend(chatId, 'weird name — keep it simple, like style.css');
       return;
     }
