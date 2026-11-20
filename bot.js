@@ -373,11 +373,16 @@ function startBot() {
           setPending(chatId, p);
           await bot.sendMessage(chatId, 'type the total duration in minutes (e.g. 300 for 5h) — it gets split across the queued files by size:');
         } else {
-          const mins = parseInt(data.slice(4), 10);
+          const raw = data.slice(4);
+          const mins = parseInt(raw, 10);
           // callback_data is owner-only, but a stale or hand-crafted button
           // can still carry a non-number — NaN here would only surface
           // later as a failed launch, so reject it at the source instead.
-          if (!Number.isFinite(mins) || mins <= 0) {
+          // Same for absurd values: the wizard caps custom durations at
+          // 840 min (14h max), and parseInt('120abc') is 120, so require
+          // clean digits inside the cap — a button above it can only be
+          // crafted, never one the wizard itself sent.
+          if (!/^\d+$/.test(raw) || !Number.isFinite(mins) || mins <= 0 || mins > 840) {
             await bot.sendMessage(chatId, 'that duration button looks stale — /start to pick a duration again.');
           } else {
             p.durationMin = mins;
