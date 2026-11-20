@@ -36,7 +36,7 @@ you give it code, tell it how long, and it:
 
 ## usage
 
-1. send the bot a code file (1MB max) or paste 200+ chars of code
+1. send the bot a code file (1MB max, counted in bytes — a file of multi-byte characters counts more than its character count) or paste 200+ chars of code
 2. `/start` → pick duration → mode → speed → project → ▶ start
 3. `/status` to watch progress, `/stop` to end early (partial file is sent), `/getfile` to grab the file anytime
 
@@ -98,7 +98,7 @@ file naming matters: the dashboard language comes from the extension, so `style.
 ## rules
 
 - realistic hours. 24h/day looks non-human on any system
-- custom durations are capped at 840 min (14h max) in the /start wizard
+- custom durations are capped at 840 min (14h max) in the /start wizard — a stale or hand-crafted duration button above 840 min is rejected the same way
 - realtime by default, instant sparingly
 - one run at a time — `/start` won't launch a new run while one is active; check `/status` or end it with `/stop`
 - until `OWNER_ID` is set the bot is unlocked — anyone who finds it can use it. don't share the bot username until after setup step 7
@@ -114,6 +114,7 @@ file naming matters: the dashboard language comes from the extension, so `style.
 - redeploy wipes in-memory state → the queue, the `/start` wizard step and any live run all live in memory. after a redeploy, re-send your files and `/start` again
 - stale inline buttons → buttons from a pre-redeploy wizard (duration, mode, project, ▶ start) are expired on purpose: tapping one tells you to `/start` again instead of launching a run with missing options
 - run failed to start → the files stay queued — just `/start` again (a failed launch no longer wedges the bot on "a run is already active")
+- run stops early with no error in chat → its output file couldn't be written (`out/` deleted mid-run, or the disk full). the run stops itself instead of crashing the bot — check the render logs for "typing write failed", then `/start` again
 - empty or binary file uploads are rejected — send a plain text/code file (1MB max)
 - file upload fails with 'could not read that file' → the telegram download timed out after 30s (slow link, or a file near the 1MB cap) — send it again, or paste the code instead
 - local test: `npm install`, copy `.env.example` to `.env`, fill it, `npm start`
