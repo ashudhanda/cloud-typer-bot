@@ -311,11 +311,22 @@ function startBot() {
       // fetch() only throws on network failure, not on HTTP errors — without
       // this check a 404/expired link body would be queued as "code".
       if (!res.ok) throw new Error(`file download failed: ${res.status}`);
+      // Refuse a body the server already says is over the cap instead of
+      // buffering it first — a multi-megabyte download would otherwise sit
+      // in memory (as text) before the byte check below ever runs. A missing
+      // header just falls through to that check.
+      const declaredBytes = Number(res.headers?.get?.('content-length'));
+      if (Number.isFinite(declaredBytes) && declaredBytes > MAX_UPLOAD_BYTES) {
+        await bot.sendMessage(chatId, 'file too big (1MB max) — code files should be tiny.');
+        return;
+      }
       const text = await res.text();
       // the file_size check above trusts Telegram's declared size — enforce
       // the same 1MB cap on the bytes actually received, so a file whose
       // declared size is missing or wrong can't queue megabytes of text.
-      if (text.length > MAX_UPLOAD_BYTES) {
+      // Byte length, not string length: a file of multi-byte characters can
+      // be far over 1MB on disk while its char count stays under the cap.
+      if (Buffer.byteLength(text) > MAX_UPLOAD_BYTES) {
         await bot.sendMessage(chatId, 'file too big (1MB max) — code files should be tiny.');
         return;
       }
