@@ -287,13 +287,17 @@ function startBot() {
     if (!sent) safeSend(chatId, 'no file yet — load files and /start a run first.');
   });
 
-  // incoming source as a file upload — stacks into the queue
+  // incoming source as a file upload — stacks into the queue. Validation
+  // notices below go through safeSend, not await: a Telegram hiccup while
+  // reporting "file too big" would otherwise land in the catch and misreport
+  // the outcome as "could not read that file" (the file itself is already
+  // queued by then, so the error would be wrong as well as unhelpful).
   bot.on('document', async (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
     try {
       if (msg.document.file_size && msg.document.file_size > MAX_UPLOAD_BYTES) {
-        await bot.sendMessage(chatId, 'file too big (1MB max) — code files should be tiny.');
+        safeSend(chatId, 'file too big (1MB max) — code files should be tiny.');
         return;
       }
       const link = await bot.getFileLink(msg.document.file_id);
@@ -317,7 +321,7 @@ function startBot() {
       // header just falls through to that check.
       const declaredBytes = Number(res.headers?.get?.('content-length'));
       if (Number.isFinite(declaredBytes) && declaredBytes > MAX_UPLOAD_BYTES) {
-        await bot.sendMessage(chatId, 'file too big (1MB max) — code files should be tiny.');
+        safeSend(chatId, 'file too big (1MB max) — code files should be tiny.');
         return;
       }
       const text = await res.text();
@@ -327,19 +331,19 @@ function startBot() {
       // Byte length, not string length: a file of multi-byte characters can
       // be far over 1MB on disk while its char count stays under the cap.
       if (Buffer.byteLength(text) > MAX_UPLOAD_BYTES) {
-        await bot.sendMessage(chatId, 'file too big (1MB max) — code files should be tiny.');
+        safeSend(chatId, 'file too big (1MB max) — code files should be tiny.');
         return;
       }
       // an empty file types nothing but still burns a run slot and a
       // "file done" delivery — reject it here instead of queueing it.
       if (!text.length) {
-        await bot.sendMessage(chatId, 'that file is empty — send a file with some code in it.');
+        safeSend(chatId, 'that file is empty — send a file with some code in it.');
         return;
       }
       // NUL bytes mean binary, not code — a photo or zip queued as "code"
       // would type unreadable bytes and burn the run's duration on garbage.
       if (text.includes('\0')) {
-        await bot.sendMessage(chatId, 'that looks like a binary file, not code — send a plain text/code file.');
+        safeSend(chatId, 'that looks like a binary file, not code — send a plain text/code file.');
         return;
       }
       // sanitize the telegram-provided filename — it could contain slashes or
@@ -348,7 +352,7 @@ function startBot() {
       const safeName = path.basename(msg.document.file_name || 'uploaded-code.txt') || 'uploaded-code.txt';
       queue.push({ content: text, fileName: safeName });
       const busy = currentRun && !currentRun.done;
-      await bot.sendMessage(
+      safeSend(
         chatId,
         `added ${msg.document.file_name || 'file'} (${text.length} chars)\nloaded: ${queueSummary()}${busy ? '\n\n(a run is active — these will be used for the next one)' : '\n\n/start when ready, /clearqueue to reset.'}`
       );
