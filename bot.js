@@ -486,8 +486,11 @@ function startBot() {
     const p = getPending(chatId);
 
     if (p && p.step === 'customDur') {
-      const mins = parseInt(msg.text.trim(), 10);
-      if (!Number.isFinite(mins) || mins < 15 || mins > 840) {
+      const text = msg.text.trim();
+      const mins = parseInt(text, 10);
+      // parseInt('300abc') is 300 — require clean digits so a trailing
+      // unit or typo can't silently pass as a valid duration.
+      if (!/^\d+$/.test(text) || !Number.isFinite(mins) || mins < 15 || mins > 840) {
         safeSend(chatId, 'give a number between 15 and 840 (14h max — keep it human).');
         return;
       }
