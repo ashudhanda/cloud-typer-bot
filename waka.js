@@ -78,6 +78,13 @@ async function sendHeartbeat(hb) {
       body: JSON.stringify(hb),
       signal: AbortSignal.timeout(HEARTBEAT_TIMEOUT_MS),
     });
+    // A bare status tells the operator nothing — read the error body (the
+    // bulk path already does this) so a 401/404 shows its reason in the
+    // logs instead of just a number in /status's failed count.
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error('heartbeat failed:', res.status, body.slice(0, 200));
+    }
     return { ok: res.ok, status: res.status };
   } catch (err) {
     return { ok: false, error: String(err) };
