@@ -184,14 +184,29 @@ class TyperRun {
       // by its char count, scaled by the speed pace (slow 1.35x ... fast
       // 0.7x). the 20ms floor stops long files collapsing to zero-delay bursts.
       const baseDelay = Math.max(20, (fileMs / Math.max(1, f.content.length)) * this.speed.pace);
-      fs.writeFileSync(f.outPath, ''); // fresh file — realtime appends chars below, instant mode writes it whole later
+      // runFile/step run on timers, so an uncaught throw here (out/ deleted
+      // mid-run, disk full) would crash the whole process — stop the run
+      // instead: the typed prefix stays on disk and /status reports it.
+      try {
+        fs.writeFileSync(f.outPath, ''); // fresh file — realtime appends chars below, instant mode writes it whole later
+      } catch (e) {
+        console.error('typing write failed:', e.message);
+        this.stop();
+        return;
+      }
 
       const step = () => {
         if (this.stopped || this.done) return;
         // small bursts of 1-4 chars feel more like a person than a fixed metronome
         const burst = Math.min(1 + Math.floor(rand(0, 3.2)), f.content.length - this.index);
         if (burst > 0) {
-          fs.appendFileSync(f.outPath, f.content.slice(this.index, this.index + burst));
+          try {
+            fs.appendFileSync(f.outPath, f.content.slice(this.index, this.index + burst));
+          } catch (e) {
+            console.error('typing write failed:', e.message);
+            this.stop();
+            return;
+          }
           this.index += burst;
         }
         if (this.index >= f.content.length) {
