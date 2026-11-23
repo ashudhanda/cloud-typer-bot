@@ -299,7 +299,17 @@ class TyperRun {
     // finish() (it would post a "run complete" message after the stop).
     if (this.stopped) return;
     for (let fi = 0; fi < this.files.length; fi++) {
-      fs.writeFileSync(this.files[fi].outPath, this.files[fi].content);
+      // A failed write (out/ deleted mid-run, disk full) used to throw out
+      // of start() after the beats were already sent — launchRun then
+      // misreported "run failed to start" and restored the queue. Log it
+      // and skip that file instead: the run still completes, and /status
+      // still shows the beats that went out.
+      try {
+        fs.writeFileSync(this.files[fi].outPath, this.files[fi].content);
+      } catch (e) {
+        console.error('instant write failed:', e.message);
+        continue;
+      }
       this.onFileDone(this, fi);
     }
     this.fileIndex = this.files.length;
