@@ -45,6 +45,14 @@ function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
+// A stray unhandled promise rejection would otherwise crash the process
+// (Node's default) and take the health server down with the bot — log it
+// and keep running instead. This is the last-resort net only: the handlers
+// above already catch the failures they know about.
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandled rejection:', reason);
+});
+
 // starts last, after the health server binds its port — render marks the
 // service live only once something is listening, so telegram polling must
 // never block or precede the bind above.
