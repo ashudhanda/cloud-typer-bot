@@ -9,12 +9,14 @@ require('dotenv').config();
 const express = require('express');
 
 const app = express();
-// Parsed as a number: passing a non-numeric PORT string straight to
-// listen() would make express treat it as a unix-socket path, not a port.
-// An out-of-range port (negative, or above 65535) is worse — listen()
-// throws and kills the process with a bare stack trace — so anything
-// outside 1-65535 falls back to 3000, like a missing PORT.
-const PORT_RAW = Number.parseInt(process.env.PORT, 10);
+// Parsed strictly with Number(), not parseInt: parseInt('1e3') is 1 — a
+// privileged port, so listen() throws EACCES and the error handler below
+// kills the process — and parseInt('3000abc') silently binds 3000.
+// Number() takes the whole string, so only a clean integer in 1-65535 is
+// used; anything else falls back to 3000, like a missing PORT. A
+// non-numeric PORT string passed straight to listen() would make express
+// treat it as a unix-socket path, not a port.
+const PORT_RAW = Number(process.env.PORT);
 const PORT = Number.isInteger(PORT_RAW) && PORT_RAW >= 1 && PORT_RAW <= 65535 ? PORT_RAW : 3000; // render injects PORT; 3000 is for local runs
 
 // '/' only proves the service is up — uptimerobot and render's health checks live on /health.
