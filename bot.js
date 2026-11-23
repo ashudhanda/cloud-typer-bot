@@ -621,13 +621,21 @@ function startBot() {
       },
     });
     try {
+      // The instant notice goes out BEFORE start(): instant mode backfills
+      // in one awaited bulk sync, so after start() the run is already done
+      // and onFinish has already posted "run complete" — sending it after
+      // would announce a run that already finished. Realtime runs on
+      // timers, so its notice still goes out after start() returns.
+      if (p.mode === 'instant') {
+        await bot.sendMessage(chatId, '⚡ instant run — backfilling heartbeats now, files land in a few seconds...');
+      }
       await currentRun.start();
-      await bot.sendMessage(
-        chatId,
-        p.mode === 'instant'
-          ? '⚡ instant run — backfilling heartbeats now, files land in a few seconds...'
-          : `⏱ realtime run started — typing ${filesForRun.length} file${filesForRun.length > 1 ? 's' : ''} over ~${(p.durationMin / 60).toFixed(1)}h. each file arrives here as it finishes. /status anytime, /stop to end early.`
-      );
+      if (p.mode !== 'instant') {
+        await bot.sendMessage(
+          chatId,
+          `⏱ realtime run started — typing ${filesForRun.length} file${filesForRun.length > 1 ? 's' : ''} over ~${(p.durationMin / 60).toFixed(1)}h. each file arrives here as it finishes. /status anytime, /stop to end early.`
+        );
+      }
     } catch (e) {
       // the failed run never started: drop it, or /start stays wedged on "a
       // run is already active" until a /stop — and hand the files back to
