@@ -123,7 +123,9 @@ async function sendBulk(hbs) {
       if (res.ok) results.sent += chunk.length;
       else {
         results.failed += chunk.length;
-        console.error('bulk heartbeat failed:', res.status, await res.text().catch(() => ''));
+        // Sliced to 200 chars like the single-heartbeat path — an api error
+        // page would otherwise spam the render logs in full, once per chunk.
+        console.error('bulk heartbeat failed:', res.status, (await res.text().catch(() => '')).slice(0, 200));
       }
     } catch (err) {
       results.failed += chunk.length;
