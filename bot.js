@@ -193,6 +193,15 @@ function startBot() {
     safeSend(chatId, `renamed to ${name}\n\nloaded: ${queueSummary()}`);
   });
 
+  // Bare /name with no argument matches neither the handler above (it needs
+  // "\s+(.+)") nor the free-text handler (it ignores "/" text), so it was
+  // silently ignored — answer with the usage instead.
+  bot.onText(/^\/name\s*$/, (msg) => {
+    const chatId = msg.chat.id;
+    if (!isOwner(chatId)) return;
+    safeSend(chatId, 'usage: /name <file> — renames the last loaded file, e.g. /name style.css');
+  });
+
   bot.onText(/^\/status\b/, (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
