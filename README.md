@@ -115,6 +115,8 @@ file naming matters: the dashboard language comes from the extension, so `style.
 - stale inline buttons → buttons from a pre-redeploy wizard (duration, mode, project, ▶ start) are expired on purpose: tapping one tells you to `/start` again instead of launching a run with missing options
 - run failed to start → the files stay queued — just `/start` again (a failed launch no longer wedges the bot on "a run is already active")
 - run stops early with no error in chat → its output file couldn't be written (`out/` deleted mid-run, or the disk full). the run stops itself instead of crashing the bot — check the render logs for "typing write failed", then `/start` again
+- stopping an instant run mid-backfill halts it — heartbeats already sent stay on the dashboard, but no files are written or delivered
+- in instant mode a failed output write is logged as "instant write failed" and the run still completes — the file just isn't delivered; check the render logs, then `/start` again
 - empty or binary file uploads are rejected — send a plain text/code file (1MB max)
 - file upload fails with 'could not read that file' → the telegram download timed out after 30s (slow link, or a file near the 1MB cap) — send it again, or paste the code instead
 - local test: `npm install`, copy `.env.example` to `.env`, fill it, `npm start`
