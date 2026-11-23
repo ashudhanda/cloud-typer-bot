@@ -293,6 +293,11 @@ class TyperRun {
     const res = await waka.sendBulk(beats);
     this.heartbeatsSent = res.sent;
     this.heartbeatsFailed = res.failed;
+    // /stop can land while the bulk sync is in flight: the beats already
+    // sent stay on the dashboard (they went out), but the run is over —
+    // don't write or deliver files for a stopped run, and don't call
+    // finish() (it would post a "run complete" message after the stop).
+    if (this.stopped) return;
     for (let fi = 0; fi < this.files.length; fi++) {
       fs.writeFileSync(this.files[fi].outPath, this.files[fi].content);
       this.onFileDone(this, fi);
