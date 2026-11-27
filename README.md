@@ -36,7 +36,7 @@ you give it code, tell it how long, and it:
 
 ## usage
 
-1. send the bot a code file (1MB max, counted in bytes — a file of multi-byte characters counts more than its character count) or paste 200+ chars of code
+1. send the bot a code file (1MB max, counted in bytes — a file of multi-byte characters counts more than its character count) or paste 200+ chars of code. the queue holds up to 25 files — /start a run to consume it, or /clearqueue to make room for more
 2. `/start` → pick duration → mode → speed → project → ▶ start
 3. `/status` to watch progress, `/stop` to end early (partial file is sent), `/getfile` to grab the file anytime
 
@@ -118,5 +118,6 @@ file naming matters: the dashboard language comes from the extension, so `style.
 - stopping an instant run mid-backfill halts it — heartbeats already sent stay on the dashboard, but no files are written or delivered
 - in instant mode a failed output write is logged as "instant write failed" and the run still completes — the file just isn't delivered; check the render logs, then `/start` again
 - empty or binary file uploads are rejected — send a plain text/code file (1MB max)
+- queue is full (25 files max) — /start a run to consume the queue, or /clearqueue to drop it; the queue recap also lists only the first names that fit, then counts the rest, so a long queue never overflows telegram's message limit
 - file upload fails with 'could not read that file' → the telegram download timed out after 30s (slow link, or a file near the 1MB cap) — send it again, or paste the code instead
 - local test: `npm install`, copy `.env.example` to `.env`, fill it, `npm start`
