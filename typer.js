@@ -164,7 +164,9 @@ class TyperRun {
     if (res.ok) this.heartbeatsSent += 1;
     else {
       this.heartbeatsFailed += 1;
-      if (res.status) console.error('heartbeat failed:', res.status);
+      // no log here: waka.sendHeartbeat already logs the failure once with
+      // the status and the (sliced) error body — logging again would make
+      // one failed beat look like two in the render logs.
     }
   }
 
