@@ -41,7 +41,7 @@ class TyperRun {
     // content we type and send; precompute line-start offsets so lineInfo()
     // can binary-search them later; give every run a unique outPath (timestamp
     // + random suffix) so reruns never overwrite earlier files.
-    this.files = (opts.files || []).map((f) => {
+    this.files = (opts.files || []).map((f, fi) => {
       const content = String(f.content || '').replace(/\r\n/g, '\n');
       const lineStarts = [0];
       for (let i = 0; i < content.length; i++) {
@@ -58,7 +58,12 @@ class TyperRun {
           // directly — a fileName like '../../../evil.js' would otherwise
           // walk out of out/ (the timestamp prefix only absorbs the first
           // '..'), so strip any directory part here as defense in depth.
-          `${Date.now()}-${Math.floor(rand(100, 999))}-${path.basename(f.fileName || 'code.txt')}`
+          // The per-file index is part of the name on purpose: files in one
+          // run are constructed within the same millisecond, so timestamp +
+          // random suffix alone could collide (1-in-900 per pair) when two
+          // files share a name — pasted code is always 'pasted-code.txt' —
+          // and the second file's writes would silently overwrite the first.
+          `${Date.now()}-${fi}-${Math.floor(rand(100, 999))}-${path.basename(f.fileName || 'code.txt')}`
         ),
       };
     });
