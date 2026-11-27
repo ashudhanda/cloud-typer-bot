@@ -418,12 +418,20 @@ function startBot() {
           }
         }
       } else if (data.startsWith('mode:')) {
-        // callback_data is owner-only, but a stale or hand-crafted button can
-        // still carry an unknown mode — TyperRun.start() would only reject it
-        // at launch, after the confirm screen, so reject it at the source
-        // like the dur: branch does (same for spd: below).
+        // Stale-button guard, same as proj: below: the mode keyboard is only
+        // sent after a duration is picked, so a mode tap with no duration
+        // means the wizard expired (restart or 30-min TTL) — expire it now
+        // instead of walking the user through speed and project first and
+        // only telling them at the confirm screen.
         const mode = data.slice(5);
-        if (mode !== 'realtime' && mode !== 'instant') {
+        if (p.durationMin == null) {
+          pending.delete(chatId);
+          await bot.sendMessage(chatId, 'that button is from an old wizard (the bot restarted since) — /start to begin again.');
+        } else if (mode !== 'realtime' && mode !== 'instant') {
+          // callback_data is owner-only, but a stale or hand-crafted button can
+          // still carry an unknown mode — TyperRun.start() would only reject it
+          // at launch, after the confirm screen, so reject it at the source
+          // like the dur: branch does (same for spd: below).
           await bot.sendMessage(chatId, 'that mode button looks stale — /start to pick a mode again.');
         } else {
           p.mode = mode;
@@ -442,8 +450,15 @@ function startBot() {
           });
         }
       } else if (data.startsWith('spd:')) {
+        // Same stale-button guard as mode: above — the speed keyboard is only
+        // sent after a mode is picked, so a speed tap with no duration/mode
+        // means the wizard expired; expire it now instead of walking on to
+        // the project step first.
         const speed = data.slice(4);
-        if (speed !== 'slow' && speed !== 'normal' && speed !== 'fast') {
+        if (p.durationMin == null || !p.mode) {
+          pending.delete(chatId);
+          await bot.sendMessage(chatId, 'that button is from an old wizard (the bot restarted since) — /start to begin again.');
+        } else if (speed !== 'slow' && speed !== 'normal' && speed !== 'fast') {
           await bot.sendMessage(chatId, 'that speed button looks stale — /start to pick a speed again.');
         } else {
           p.speed = speed;
