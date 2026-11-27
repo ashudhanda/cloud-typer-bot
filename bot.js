@@ -77,9 +77,26 @@ function modeKeyboard() {
 
 // one-line queue recap reused by /start, /queue and the confirm screen, e.g.
 // "2 files (12,340 chars) — app.js, style.css"
+// Telegram caps messages at 4096 chars, and this recap goes out on /start,
+// /queue, the confirm screen and every upload reply — a long queue of
+// long-named files would otherwise push it over the limit, and the send
+// would fail silently via safeSend, stalling the wizard with no feedback.
+// So names are listed only while they fit in a ~3000-char budget (each name
+// also capped at 150 chars), and the rest are counted, not listed.
 function queueSummary() {
   const total = queue.reduce((s, f) => s + f.content.length, 0);
-  const names = queue.map((f) => f.fileName).join(', ');
+  const BUDGET = 3000;
+  const shown = [];
+  let used = 0;
+  for (const f of queue) {
+    const name = f.fileName.length > 150 ? f.fileName.slice(0, 147) + '…' : f.fileName;
+    const piece = (shown.length ? ', ' : '') + name;
+    if (used + piece.length > BUDGET && shown.length) break;
+    shown.push(name);
+    used += piece.length;
+  }
+  const rest = queue.length - shown.length;
+  const names = shown.join(', ') + (rest ? ` … +${rest} more` : '');
   return `${queue.length} file${queue.length > 1 ? 's' : ''} (${total.toLocaleString()} chars) — ${names}`;
 }
 
