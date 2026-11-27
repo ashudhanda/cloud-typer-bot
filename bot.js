@@ -378,9 +378,12 @@ function startBot() {
       const safeName = path.basename(msg.document.file_name || 'uploaded-code.txt') || 'uploaded-code.txt';
       queue.push({ content: text, fileName: safeName });
       const busy = currentRun && !currentRun.done;
+      // name the sanitized file that was actually queued, not the raw
+      // telegram name — with a hostile name ("../../evil.js") the reply
+      // used to show the raw path while the queue held "evil.js".
       safeSend(
         chatId,
-        `added ${msg.document.file_name || 'file'} (${text.length} chars)\nloaded: ${queueSummary()}${busy ? '\n\n(a run is active — these will be used for the next one)' : '\n\n/start when ready, /clearqueue to reset.'}`
+        `added ${safeName} (${text.length} chars)\nloaded: ${queueSummary()}${busy ? '\n\n(a run is active — these will be used for the next one)' : '\n\n/start when ready, /clearqueue to reset.'}`
       );
     } catch {
       // safeSend: this notice sits outside any try — a failed send here
