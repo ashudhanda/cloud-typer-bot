@@ -14,6 +14,13 @@ const OWNER_ID = String(process.env.OWNER_ID || '').trim();
 // "1MB max" the bot's own messages and the README promise.
 const MAX_UPLOAD_BYTES = 1024 * 1024;
 
+// hard cap on how many files can sit in the queue — each queued file holds
+// up to 1MB of text in memory, so an uncapped queue lets a bulk upload grow
+// past the free instance's RAM; 25 files is far more than a run ever needs.
+// Enforced at both intake points (document upload and pasted code) so the
+// cap can't be dodged by pasting instead of uploading.
+const MAX_QUEUE_FILES = 25;
+
 let bot = null;
 let currentRun = null;
 let queue = []; // [{ content, fileName }] — send as many files as you like, they stack up
@@ -321,6 +328,12 @@ function startBot() {
   bot.on('document', async (msg) => {
     const chatId = msg.chat.id;
     if (!isOwner(chatId)) return;
+    // fail fast before the download: a full queue would reject the file
+    // after fetching it anyway, and the download is the slow part.
+    if (queue.length >= MAX_QUEUE_FILES) {
+      safeSend(chatId, 'queue is full (25 files max) — /start a run or /clearqueue to make room.');
+      return;
+    }
     try {
       if (msg.document.file_size && msg.document.file_size > MAX_UPLOAD_BYTES) {
         safeSend(chatId, 'file too big (1MB max) — code files should be tiny.');
@@ -576,6 +589,12 @@ function startBot() {
     if (msg.text.length >= 200) {
       // 200 chars is the "real code" floor from the README — anything shorter
       // is probably a chat reply, not a file worth queueing for typing.
+      // Same 25-file cap as the document upload: pastes bypass that path,
+      // so they need the same guard or the cap is trivially dodged.
+      if (queue.length >= MAX_QUEUE_FILES) {
+        safeSend(chatId, 'queue is full (25 files max) — /start a run or /clearqueue to make room.');
+        return;
+      }
       queue.push({ content: msg.text, fileName: 'pasted-code.txt' });
       const busy = currentRun && !currentRun.done;
       safeSend(
